@@ -1,0 +1,25 @@
+name: release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4.2.2
+
+      - name: set up rust
+        uses: actions-rs/toolchain@v1.0.6
+        with:
+          toolchain: stable
+          override: true
+
+      - name: publish qrypto
+        uses: katyo/publish-crates@v2
+        with:
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          path: .

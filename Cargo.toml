@@ -1,0 +1,28 @@
+[package]
+name = "qrypto"
+version = "0.1.0"
+edition = "2021"
+authors = ["кuro <x40151@proton.me>"]
+description = "The post-quantum cryptography library in Rust."
+license = "MIT"
+documentation = "https://docs.rs/qrypto/latest/qrypto/"
+repository = "https://github.com/kurosci/qrypto"
+readme = "../README.md"
+rust-version = "1.83.0"
+homepage = "https://github.com/kurosci/qrypto"
+keywords = ["post-quantum", "pqc", "cryptography", "quantum-safe", "encryption"]
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+[dependencies]
+thiserror = "2.0"
+rand = "0.8"
+
+[dev-dependencies]
+criterion = "0.5"
+
+# [[bench]]
+# name = "kyber"
+# harness = false
+# path = "benches/algorithms/kyber.rs"
