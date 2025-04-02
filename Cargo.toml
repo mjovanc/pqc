@@ -2,14 +2,14 @@
 name = "qrypto"
 version = "0.1.0"
 edition = "2021"
-authors = ["кuro <x40151@proton.me>"]
+authors = ["Marcus Cvjeticanin <mjovanc@icloud.com>"]
 description = "The post-quantum cryptography library in Rust."
 license = "MIT"
 documentation = "https://docs.rs/qrypto/latest/qrypto/"
-repository = "https://github.com/kurosci/qrypto"
+repository = "https://github.com/mjovanc/qrypto"
 readme = "README.md"
 rust-version = "1.83.0"
-homepage = "https://github.com/kurosci/qrypto"
+homepage = "https://github.com/mjovanc/qrypto"
 keywords = ["post-quantum", "pqc", "cryptography", "quantum-safe", "encryption"]
 
 [badges]

@@ -1,6 +1,6 @@
 # qrypto
 
-![ci](https://img.shields.io/github/actions/workflow/status/kurosci/qrypto/ci.yml?branch=master)
+![ci](https://img.shields.io/github/actions/workflow/status/mjovanc/qrypto/ci.yml?branch=master)
 ![crates.io](https://img.shields.io/crates/v/qrypto.svg)
 [![documentation](https://img.shields.io/badge/docs-qrypto-blue?logo=rust)](https://docs.rs/qrypto/latest/)
 
@@ -27,10 +27,10 @@ To test the latest code directly from the Git repository (recommended for trying
 
 ```toml
 [dependencies]
-qrypto = { git = "https://github.com/kurosci/qrypto.git", branch = "master" }
+qrypto = { git = "https://github.com/mjovanc/qrypto.git", branch = "master" }
 ```
 
-The Git version pulls the most recent updates from the master branch at [https://github.com/kurosci/qrypto](https://github.com/kurosci/qrypto),
+The Git version pulls the most recent updates from the master branch at [https://github.com/mjovanc/qrypto](https://github.com/mjovanc/qrypto),
 which may include features not yet released in the [crates.io](https://crates.io/crates/qrypto) version (`0.1.0`). Be aware that this is experimental and subject to change!
 
 ### Basic Example
@@ -78,7 +78,7 @@ Below is a table of currently supported features and planned additions for `qryp
 We warmly invite the community to participate in peer reviewing specific aspects of `qrypto` once they are considered done in the status column of the table.
 Features marked "✅" will have completed implementation and initial testing by the development team, making them ready for external scrutiny.
 Peer review is critical to ensure cryptographic soundness, side-channel resistance, and practical usability. If you’re interested in contributing,
-please check the [contribution guide](https://github.com/kurosci/qrypto/blob/master/CONTRIBUTING.md) for details on how to get involved,
+please check the [contribution guide](https://github.com/mjovanc/qrypto/blob/master/CONTRIBUTING.md) for details on how to get involved,
 and watch the table for updates as features move to "✅" status. Your expertise can help make `qrypto` a trusted PQC solution!
 
 ## Roadmap
@@ -89,7 +89,7 @@ We’re working toward a fully featured Rust PQC library. Planned milestones inc
 - **Version 0.3.0**: Add full Dilithium support (Dilithium2, Dilithium3, Dilithium5) for digital signatures (NIST FIPS 204).
 - **Version 0.4.0**: Add full SPHINCS+ support (SPHINCS+-128s, 128f, 256s, 256f) and hybrid encryption with AES-256-GCM (NIST FIPS 205).
 
-_Check the [GitHub Issues](https://github.com/kurosci/qrypto/issues) for the latest priorities and to suggest features._
+_Check the [GitHub Issues](https://github.com/mjovanc/qrypto/issues) for the latest priorities and to suggest features._
 
 ## Getting Help
 
@@ -97,13 +97,13 @@ Are you having trouble with `qrypto`? We want to help!
 
 - Read through the documentation on our [docs](https://docs.rs/qrypto/latest/qrypto/).
 
-- If you’d like to discuss `qrypto`, head over to [GitHub Discussions](https://github.com/kurosci/qrypto/discussions) and join the conversation.
+- If you’d like to discuss `qrypto`, head over to [GitHub Discussions](https://github.com/mjovanc/qrypto/discussions) and join the conversation.
 
 - If you are upgrading, read the release notes to be informed about breaking changes.
 
 - Ask a question we monitor stackoverflow.com for questions tagged with `qrypto`.
 
-- Report bugs with `qrypto` at https://github.com/kurosci/qrypto/issues.
+- Report bugs with `qrypto` at https://github.com/mjovanc/qrypto/issues.
 
 ## Reporting Issues
 
@@ -121,7 +121,7 @@ Are you having trouble with `qrypto`? We want to help!
 
 ## Contributing
 
-Before contributing, please read the [contribution](https://github.com/kurosci/qrypto/blob/master/CONTRIBUTING.md) guide for useful information how to get started with `qrypto` as well as what should be included when submitting a contribution to the project.
+Before contributing, please read the [contribution](https://github.com/mjovanc/qrypto/blob/master/CONTRIBUTING.md) guide for useful information how to get started with `qrypto` as well as what should be included when submitting a contribution to the project.
 
 ## Acknowledgements
 
