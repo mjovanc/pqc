@@ -1,6 +1,6 @@
 use crate::{
     error::QryptoError,
-    traits::{KeyEncapsulation, KeyPair},
+    traits::{Algorithm, KeyPair},
     util::generate_random_bytes,
 };
 
@@ -37,7 +37,7 @@ impl KeyPair for KyberKeyPair {
 
 pub struct Kyber512;
 
-impl KeyEncapsulation for Kyber512 {
+impl Algorithm for Kyber512 {
     type KeyPair = KyberKeyPair;
     type PublicKey = Vec<u8>;
     type SecretKey = Vec<u8>;
@@ -63,6 +63,22 @@ impl KeyEncapsulation for Kyber512 {
         }
         let shared_secret = generate_random_bytes(SHARED_SECRET_SIZE)?;
         Ok(shared_secret)
+    }
+
+    fn serialize_public_key(_pk: &Self::PublicKey) -> Vec<u8> {
+        todo!()
+    }
+
+    fn deserialize_public_key(_bytes: &[u8]) -> Result<Self::PublicKey, QryptoError> {
+        todo!()
+    }
+
+    fn serialize_secret_key(_sk: &Self::SecretKey) -> Vec<u8> {
+        todo!()
+    }
+
+    fn deserialize_secret_key(_bytes: &[u8]) -> Result<Self::SecretKey, QryptoError> {
+        todo!()
     }
 }
 
