@@ -62,14 +62,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 Below is a table of currently supported features and planned additions for `qrypto`, designed to make it a fully featured post-quantum cryptography library.
 
-| Feature                    | Description                                              | Status  | Notes                                                                                   |
-|----------------------------|----------------------------------------------------------|---------|-----------------------------------------------------------------------------------------|
+| Feature                    | Description                                              | Status | Notes                                                                                   |
+|----------------------------|----------------------------------------------------------|------|-----------------------------------------------------------------------------------------|
 | **Kyber (KEM)**            | Key Encapsulation Mechanism (NIST-standard)              | 🏗️ | Supports Kyber512, Kyber768, Kyber1024 for varying security levels (FIPS 203).          |
-| **Dilithium (Signatures)** | Digital signature scheme (NIST-standard)                 | 🏗️ | Includes Dilithium2, Dilithium3, Dilithium5 variants (FIPS 204).                        |
-| **SPHINCS+ (Signatures)**  | Stateless hash-based signature scheme (NIST-standard)    | 🏗️ | Supports SPHINCS+-128s, 128f, 256s, 256f for stateless signing (FIPS 205).              |
-| **HQC (KEM)**              | Code-based Key Encapsulation Mechanism (NIST-standard)   | 🏗️ | Supports HQC-128, HQC-192, HQC-256; added to NIST standards March 11, 2025.             |
-| **Hybrid Encryption**      | Combines PQC with classical algorithms                   | 🏗️ | Will support AES-256-GCM or ChaCha20-Poly1305 for authenticated encryption.             |
-| **Hybrid Public-Key Crypto** | Combines PQC with RSA/ECC for transitional use         | 🏗️ | Enables dual KEMs or signatures (e.g., Kyber + RSA) for legacy compatibility.           |
+| **Dilithium (Signatures)** | Digital signature scheme (NIST-standard)                 | 🚧 | Includes Dilithium2, Dilithium3, Dilithium5 variants (FIPS 204).                        |
+| **SPHINCS+ (Signatures)**  | Stateless hash-based signature scheme (NIST-standard)    | 🚧 | Supports SPHINCS+-128s, 128f, 256s, 256f for stateless signing (FIPS 205).              |
+| **HQC (KEM)**              | Code-based Key Encapsulation Mechanism (NIST-standard)   | 🚧️ | Supports HQC-128, HQC-192, HQC-256; added to NIST standards March 11, 2025.             |
+| **Hybrid Encryption**      | Combines PQC with classical algorithms                   | 🚧 | Will support AES-256-GCM or ChaCha20-Poly1305 for authenticated encryption.             |
+| **Hybrid Public-Key Crypto** | Combines PQC with RSA/ECC for transitional use         | 🚧 | Enables dual KEMs or signatures (e.g., Kyber + RSA) for legacy compatibility.           |
 
 ## Peer Reviewing
 
