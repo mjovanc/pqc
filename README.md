@@ -4,7 +4,7 @@
 ![crates.io](https://img.shields.io/crates/v/qrypto.svg)
 [![documentation](https://img.shields.io/badge/docs-qrypto-blue?logo=rust)](https://docs.rs/qrypto/latest/)
 
-The post-quantum cryptography library in pure Rust. Currently experimental, use it with caution!
+The post-quantum cryptography library in pure Rust. Currently experimental, use it with caution! ⚠️
 
 ## Motivation
 
