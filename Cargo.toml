@@ -8,7 +8,7 @@ license = "MIT"
 documentation = "https://docs.rs/qrypto/latest/qrypto/"
 repository = "https://github.com/mjovanc/qrypto"
 readme = "README.md"
-rust-version = "1.83.0"
+rust-version = "1.86.0"
 homepage = "https://github.com/mjovanc/qrypto"
 keywords = ["post-quantum", "pqc", "cryptography", "quantum-safe", "encryption"]
 
@@ -17,7 +17,7 @@ maintenance = { status = "actively-developed" }
 
 [dependencies]
 thiserror = "2.0"
-rand = "0.8"
+rand = "0.9.0"
 
 [dev-dependencies]
 criterion = "0.5"

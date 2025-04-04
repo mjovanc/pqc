@@ -10,6 +10,4 @@ pub enum QryptoError {
     DecapsulationFailed,
     #[error("Invalid ciphertext")]
     InvalidCiphertext,
-    #[error("RNG error")]
-    RngError(#[from] rand::Error),
 }
