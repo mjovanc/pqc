@@ -10,4 +10,6 @@ pub enum QryptoError {
     DecapsulationFailed,
     #[error("Invalid ciphertext")]
     InvalidCiphertext,
+    #[error("Random key generation failed")]
+    RandomGenerationFailed,
 }
