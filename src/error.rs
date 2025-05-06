@@ -8,8 +8,10 @@ pub enum QryptoError {
     EncapsulationFailed,
     #[error("Decapsulation failed")]
     DecapsulationFailed,
-    #[error("Invalid ciphertext")]
-    InvalidCiphertext,
     #[error("Random key generation failed")]
     RandomGenerationFailed,
+    #[error("Serialization failed")]
+    SerializationError,
+    #[error("Invalid parameter")]
+    InvalidParameter,
 }
