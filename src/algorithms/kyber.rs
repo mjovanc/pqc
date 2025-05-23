@@ -1,11 +1,13 @@
 use crate::{
+    algorithms::{Kyber512Params, KyberParams},
     error::QryptoError,
-    math::{Polynomial, PolyVec, PolyMatrix, sample_cbd},
+    math::{sample_cbd, PolyMatrix, PolyVec, Polynomial},
     traits::{Algorithm, KeyPair},
     util::generate_random_bytes,
-    algorithms::{KyberParams, Kyber512Params},
 };
 use sha3::{Digest, Sha3_256};
+
+use super::{Kyber1024Params, Kyber768Params};
 
 #[derive(Debug)]
 pub struct KyberKeyPair {
@@ -76,11 +78,8 @@ impl<P: KyberParams> Algorithm for Kyber<P> {
 
         // 6. Serialize public key: (t_compressed, seed)
         let t_bytes = t_compressed.to_compressed_bytes(d_t);
-        let t_bytes_expected = P::K
-            .checked_mul(P::N)
-            .and_then(|x| x.checked_mul(d_t as usize))
-            .map(|x| x / 8)
-            .ok_or(QryptoError::SerializationError)?;
+        let t_bytes_expected =
+            P::K.checked_mul(P::N).and_then(|x| x.checked_mul(d_t as usize)).map(|x| x / 8).ok_or(QryptoError::SerializationError)?;
         println!("t_bytes: {:?}", t_bytes.len());
         if t_bytes.len() != t_bytes_expected {
             return Err(QryptoError::SerializationError);
@@ -92,22 +91,14 @@ impl<P: KyberParams> Algorithm for Kyber<P> {
 
         // 7. Serialize secret key: s_compressed, pk_hash, z, pk
         let mut sk = vec![0u8; P::SK_SIZE];
-        let d_s = match P::K {
-            2 => 12, // Kyber512: s compressed to 12 bits (non-standard)
-            3 => 12, // Kyber768: s compressed to 12 bits (non-standard)
-            4 => 11, // Kyber1024: s compressed to 11 bits (non-standard)
-            _ => return Err(QryptoError::InvalidParameter),
-        };
+        let d_s = 12;
         let mut s_compressed = PolyVec::<P>::new(P::K);
         for i in 0..P::K {
             s_compressed.get_vec_mut()[i] = s.get_vec()[i].compress(d_s);
         }
         let s_bytes = s_compressed.to_compressed_bytes(d_s);
-        let s_bytes_expected = P::K
-            .checked_mul(P::N)
-            .and_then(|x| x.checked_mul(d_s as usize))
-            .map(|x| x / 8)
-            .ok_or(QryptoError::SerializationError)?;
+        let s_bytes_expected =
+            P::K.checked_mul(P::N).and_then(|x| x.checked_mul(d_s as usize)).map(|x| x / 8).ok_or(QryptoError::SerializationError)?;
         println!("s_bytes: {:?}", s_bytes.len());
         if s_bytes.len() != s_bytes_expected {
             return Err(QryptoError::SerializationError);
@@ -124,10 +115,7 @@ impl<P: KyberParams> Algorithm for Kyber<P> {
         sk[sk_hash_offset..sk_z_offset].copy_from_slice(&z);
         sk[sk_z_offset..P::SK_SIZE].copy_from_slice(&pk);
 
-        Ok(KyberKeyPair {
-            public_key: pk,
-            secret_key: sk,
-        })
+        Ok(KyberKeyPair { public_key: pk, secret_key: sk })
     }
 
     fn encapsulate(_pk: &Self::PublicKey) -> Result<(Vec<u8>, Vec<u8>), QryptoError> {
@@ -140,6 +128,8 @@ impl<P: KyberParams> Algorithm for Kyber<P> {
 }
 
 pub type Kyber512 = Kyber<Kyber512Params>;
+pub type Kyber768 = Kyber<Kyber768Params>;
+pub type Kyber1024 = Kyber<Kyber1024Params>;
 
 #[cfg(test)]
 mod tests {
@@ -153,5 +143,23 @@ mod tests {
         println!("secret key length: {:?}", keypair.secret_key().len());
         assert_eq!(keypair.public_key().len(), Kyber512Params::PK_SIZE);
         assert_eq!(keypair.secret_key().len(), Kyber512Params::SK_SIZE);
+    }
+
+    #[test]
+    fn kyber768_generate_keypair() {
+        let keypair = generate_keypair::<Kyber768>().expect("Keypair generation failed");
+        println!("public key length: {:?}", keypair.public_key().len());
+        println!("secret key length: {:?}", keypair.secret_key().len());
+        assert_eq!(keypair.public_key().len(), Kyber768Params::PK_SIZE);
+        assert_eq!(keypair.secret_key().len(), Kyber768Params::SK_SIZE);
+    }
+
+    #[test]
+    fn kyber1024_generate_keypair() {
+        let keypair = generate_keypair::<Kyber1024>().expect("Keypair generation failed");
+        println!("public key length: {:?}", keypair.public_key().len());
+        println!("secret key length: {:?}", keypair.secret_key().len());
+        assert_eq!(keypair.public_key().len(), Kyber1024Params::PK_SIZE);
+        assert_eq!(keypair.secret_key().len(), Kyber1024Params::SK_SIZE);
     }
 }
