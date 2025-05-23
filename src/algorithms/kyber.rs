@@ -66,12 +66,7 @@ impl<P: KyberParams> Algorithm for Kyber<P> {
 
         // 5. Compress t to d_t bits per coefficient
         let mut t_compressed = PolyVec::<P>::new(P::K);
-        let d_t = match P::K {
-            2 => 12, // Kyber512: t compressed to 12 bits
-            3 => 12, // Kyber768: t compressed to 12 bits
-            4 => 11, // Kyber1024: t compressed to 11 bits
-            _ => return Err(QryptoError::InvalidParameter),
-        };
+        let d_t = 12;
         for i in 0..P::K {
             t_compressed.get_vec_mut()[i] = t.get_vec()[i].compress(d_t);
         }
@@ -80,26 +75,25 @@ impl<P: KyberParams> Algorithm for Kyber<P> {
         let t_bytes = t_compressed.to_compressed_bytes(d_t);
         let t_bytes_expected =
             P::K.checked_mul(P::N).and_then(|x| x.checked_mul(d_t as usize)).map(|x| x / 8).ok_or(QryptoError::SerializationError)?;
-        println!("t_bytes: {:?}", t_bytes.len());
         if t_bytes.len() != t_bytes_expected {
             return Err(QryptoError::SerializationError);
         }
 
         let mut pk = vec![0u8; P::PK_SIZE];
+        let seed_slice_size = P::PK_SIZE - t_bytes_expected;
+        assert_eq!(seed_slice_size, 32, "Expected 32-byte seed space in public key");
         pk[0..t_bytes_expected].copy_from_slice(&t_bytes);
         pk[t_bytes_expected..P::PK_SIZE].copy_from_slice(&seed);
 
-        // 7. Serialize secret key: s_compressed, pk_hash, z, pk
+        // 7. Serialize secret key: s, pk_hash, z, pk
         let mut sk = vec![0u8; P::SK_SIZE];
-        let d_s = 12;
+        let d_s = 12; // Full precision for all Kyber variants
         let mut s_compressed = PolyVec::<P>::new(P::K);
         for i in 0..P::K {
             s_compressed.get_vec_mut()[i] = s.get_vec()[i].compress(d_s);
         }
         let s_bytes = s_compressed.to_compressed_bytes(d_s);
-        let s_bytes_expected =
-            P::K.checked_mul(P::N).and_then(|x| x.checked_mul(d_s as usize)).map(|x| x / 8).ok_or(QryptoError::SerializationError)?;
-        println!("s_bytes: {:?}", s_bytes.len());
+        let s_bytes_expected = (P::K * P::N * 12) / 8;
         if s_bytes.len() != s_bytes_expected {
             return Err(QryptoError::SerializationError);
         }

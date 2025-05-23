@@ -7,10 +7,7 @@ pub struct Polynomial<P: KyberParams> {
 
 impl<P: KyberParams> Clone for Polynomial<P> {
     fn clone(&self) -> Self {
-        Polynomial {
-            coeffs: self.coeffs.clone(),
-            _phantom: std::marker::PhantomData,
-        }
+        Polynomial { coeffs: self.coeffs.clone(), _phantom: std::marker::PhantomData }
     }
 }
 
@@ -22,10 +19,7 @@ impl<P: KyberParams> Default for Polynomial<P> {
 
 impl<P: KyberParams> Polynomial<P> {
     pub fn new() -> Self {
-        Polynomial {
-            coeffs: vec![0; P::N],
-            _phantom: std::marker::PhantomData,
-        }
+        Polynomial { coeffs: vec![0; P::N], _phantom: std::marker::PhantomData }
     }
 
     pub fn add(&self, other: &Self) -> Self {
@@ -58,6 +52,7 @@ impl<P: KyberParams> Polynomial<P> {
     }
 
     pub fn compress(&self, d: u32) -> Self {
+        println!("Compressing polynomial with d = {}", d);
         let mut result = Polynomial::new();
         let q = P::Q as u64; // Use u64 for modulo
         let d_mask = (1u64 << d) - 1;
@@ -74,6 +69,7 @@ impl<P: KyberParams> Polynomial<P> {
     }
 
     pub fn to_compressed_bytes(&self, d: u32) -> Vec<u8> {
+        println!("PolyVec to_compressed_bytes with d = {}", d);
         let mut bytes = Vec::new();
         let mut buffer = 0u64; // Use u64 to prevent overflow
         let mut bits_in_buffer = 0u32;
@@ -203,8 +199,5 @@ pub fn sample_cbd<P: KyberParams>(eta: u32, bytes: &[u8]) -> Polynomial<P> {
         }
         coeffs[i] = sum;
     }
-    Polynomial {
-        coeffs,
-        _phantom: std::marker::PhantomData,
-    }
+    Polynomial { coeffs, _phantom: std::marker::PhantomData }
 }
