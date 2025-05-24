@@ -3,7 +3,7 @@ use crate::{
     crypto::{hash::hash_xof, rand::generate_random_bytes},
     encoding_err,
     error::{EncodingErrorKind, ParameterErrorKind, QryptoError},
-    math::{sample_cbd, sample_uniform, PolyMatrix, PolyVec, Polynomial},
+    math::{generate_matrix, sample_cbd, PolyVec, Polynomial},
     param_err,
     traits::{KEMAlgorithm, KeyPair},
 };
@@ -11,20 +11,6 @@ use sha3::digest::{ExtendableOutput, Update};
 use sha3::{Digest as Sha3Digest, Sha3_256, Sha3_512, Shake128, Shake256};
 
 use super::{Kyber1024Params, Kyber768Params};
-
-fn generate_matrix_a<P: KyberParams>(rho: &[u8]) -> PolyMatrix<P> {
-    let mut a = PolyMatrix::<P>::new(P::K, P::K);
-    for i in 0..P::K {
-        for j in 0..P::K {
-            let mut hasher = Shake128::default();
-            hasher.update(rho);
-            hasher.update(&[i as u8, j as u8]);
-            let mut reader = hasher.finalize_xof();
-            a.get_matrix_mut()[i][j] = sample_uniform::<P>(&mut reader);
-        }
-    }
-    a
-}
 
 #[derive(Debug)]
 pub struct KyberKeyPair {
@@ -169,7 +155,7 @@ impl<P: KyberParams> KEMAlgorithm for Kyber<P> {
 
     fn generate_keypair() -> Result<Self::KeyPair, QryptoError> {
         let seed = generate_random_bytes(32)?;
-        let a = generate_matrix_a::<P>(&seed);
+        let a = generate_matrix::<P>(&seed, P::K, P::K);
 
         let s = Self::sample_polyvec_cbd(P::ETA1, P::K)?;
         let e = Self::sample_polyvec_cbd(P::ETA1, P::K)?;
@@ -198,7 +184,7 @@ impl<P: KyberParams> KEMAlgorithm for Kyber<P> {
 
         let (t_compressed_bytes, rho) = Self::parse_public_key(pk)?;
         let hat_t = PolyVec::<P>::decompress(t_compressed_bytes, 12)?;
-        let a = generate_matrix_a::<P>(&rho);
+        let a = generate_matrix::<P>(&rho, P::K, P::K);
 
         let mut r_vec = PolyVec::<P>::new(P::K);
         for i in 0..P::K {
@@ -273,7 +259,7 @@ impl<P: KyberParams> KEMAlgorithm for Kyber<P> {
         let (k_bar, r_seed) = g_output.split_at(32);
 
         let hat_t = PolyVec::<P>::decompress(t_compressed_bytes, 12)?;
-        let a = generate_matrix_a::<P>(&rho);
+        let a = generate_matrix::<P>(&rho, P::K, P::K);
         let mut r_vec = PolyVec::<P>::new(P::K);
         for i in 0..P::K {
             let mut shake = Shake128::default();

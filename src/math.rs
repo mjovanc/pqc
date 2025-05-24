@@ -1,4 +1,7 @@
-use sha3::digest::XofReader;
+use sha3::{
+    digest::{ExtendableOutput, Update, XofReader},
+    Shake128,
+};
 
 use crate::{
     algorithms::PolynomialParams,
@@ -303,4 +306,18 @@ pub fn sample_uniform<P: PolynomialParams>(reader: &mut dyn XofReader) -> Polyno
         coeffs[i] = x as i16;
     }
     Polynomial { coeffs, _phantom: std::marker::PhantomData }
+}
+
+pub fn generate_matrix<P: PolynomialParams>(seed: &[u8], rows: usize, cols: usize) -> PolyMatrix<P> {
+    let mut a = PolyMatrix::<P>::new(rows, cols);
+    for i in 0..rows {
+        for j in 0..cols {
+            let mut hasher = Shake128::default();
+            hasher.update(seed);
+            hasher.update(&[i as u8, j as u8]);
+            let mut reader = hasher.finalize_xof();
+            a.get_matrix_mut()[i][j] = sample_uniform::<P>(&mut reader);
+        }
+    }
+    a
 }
