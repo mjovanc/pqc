@@ -2,9 +2,12 @@ pub mod kyber;
 
 pub use kyber::Kyber512;
 
-pub trait KyberParams {
+pub trait PolynomialParams {
     const N: usize; // Polynomial degree
     const Q: i32; // Modulus
+}
+
+pub trait KyberParams: PolynomialParams {
     const K: usize; // Module rank
     const ETA1: u32; // Noise parameter for s, e
     const ETA2: u32; // Noise parameter for encapsulation
@@ -16,9 +19,11 @@ pub trait KyberParams {
 }
 
 pub struct Kyber512Params;
-impl KyberParams for Kyber512Params {
+impl PolynomialParams for Kyber512Params {
     const N: usize = 256;
     const Q: i32 = 3329;
+}
+impl KyberParams for Kyber512Params {
     const K: usize = 2;
     const ETA1: u32 = 3;
     const ETA2: u32 = 2;
@@ -30,9 +35,11 @@ impl KyberParams for Kyber512Params {
 }
 
 pub struct Kyber768Params;
-impl KyberParams for Kyber768Params {
+impl PolynomialParams for Kyber768Params {
     const N: usize = 256;
     const Q: i32 = 3329;
+}
+impl KyberParams for Kyber768Params {
     const K: usize = 3;
     const ETA1: u32 = 2;
     const ETA2: u32 = 2;
@@ -44,9 +51,11 @@ impl KyberParams for Kyber768Params {
 }
 
 pub struct Kyber1024Params;
-impl KyberParams for Kyber1024Params {
+impl PolynomialParams for Kyber1024Params {
     const N: usize = 256;
     const Q: i32 = 3329;
+}
+impl KyberParams for Kyber1024Params {
     const K: usize = 4;
     const ETA1: u32 = 2;
     const ETA2: u32 = 2;

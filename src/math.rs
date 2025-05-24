@@ -1,25 +1,25 @@
 use sha3::digest::XofReader;
 
-use crate::{algorithms::KyberParams, error::QryptoError};
+use crate::{algorithms::PolynomialParams, error::QryptoError};
 
-pub struct Polynomial<P: KyberParams> {
+pub struct Polynomial<P: PolynomialParams> {
     coeffs: Vec<i16>,
     _phantom: std::marker::PhantomData<P>,
 }
 
-impl<P: KyberParams> Clone for Polynomial<P> {
+impl<P: PolynomialParams> Clone for Polynomial<P> {
     fn clone(&self) -> Self {
         Polynomial { coeffs: self.coeffs.clone(), _phantom: std::marker::PhantomData }
     }
 }
 
-impl<P: KyberParams> Default for Polynomial<P> {
+impl<P: PolynomialParams> Default for Polynomial<P> {
     fn default() -> Self {
         Polynomial::new()
     }
 }
 
-impl<P: KyberParams> Polynomial<P> {
+impl<P: PolynomialParams> Polynomial<P> {
     pub fn new() -> Self {
         Polynomial { coeffs: vec![0; P::N], _phantom: std::marker::PhantomData }
     }
@@ -66,13 +66,13 @@ impl<P: KyberParams> Polynomial<P> {
         result
     }
 
-    pub fn decompress(bytes: &[u8], d: u32) -> Result<Self, crate::error::QryptoError> {
+    pub fn decompress(bytes: &[u8], d: u32) -> Result<Self, QryptoError> {
         let mut coeffs = vec![0i16; P::N];
         let q = P::Q as u64;
         let bits_per_coeff = d as usize;
         let bytes_needed = (P::N * bits_per_coeff).div_ceil(8);
         if bytes.len() < bytes_needed {
-            return Err(crate::error::QryptoError::SerializationError);
+            return Err(QryptoError::SerializationError);
         }
 
         let mut bit_idx = 0;
@@ -84,7 +84,7 @@ impl<P: KyberParams> Polynomial<P> {
 
             while bits_read < bits_to_read {
                 if byte_idx >= bytes.len() {
-                    return Err(crate::error::QryptoError::SerializationError);
+                    return Err(QryptoError::SerializationError);
                 }
                 let bits_available = 8 - (bit_idx % 8);
                 let bits_needed = bits_to_read - bits_read;
@@ -103,7 +103,7 @@ impl<P: KyberParams> Polynomial<P> {
             let scaled = y.wrapping_mul(q) + (1u64 << (d - 1));
             let decompressed = scaled >> d;
             if decompressed >= q {
-                return Err(crate::error::QryptoError::SerializationError);
+                return Err(QryptoError::SerializationError);
             }
             coeffs[i] = decompressed as i16;
         }
@@ -136,11 +136,12 @@ impl<P: KyberParams> Polynomial<P> {
     }
 }
 
-pub struct PolyVec<P: KyberParams> {
+#[derive(Default)]
+pub struct PolyVec<P: PolynomialParams> {
     vec: Vec<Polynomial<P>>,
 }
 
-impl<P: KyberParams> PolyVec<P> {
+impl<P: PolynomialParams> PolyVec<P> {
     pub fn new(size: usize) -> Self {
         let mut vec = Vec::with_capacity(size);
         for _ in 0..size {
@@ -176,21 +177,19 @@ impl<P: KyberParams> PolyVec<P> {
         bytes
     }
 
-    pub fn decompress(bytes: &[u8], d: u32) -> Result<Self, crate::error::QryptoError> {
+    pub fn decompress(bytes: &[u8], d: u32) -> Result<Self, QryptoError> {
         let bytes_per_poly = (P::N * d as usize).div_ceil(8);
-        let expected_bytes = bytes_per_poly * P::K;
-        if bytes.len() < expected_bytes {
-            return Err(crate::error::QryptoError::SerializationError);
+        if bytes.len() % bytes_per_poly != 0 {
+            return Err(QryptoError::SerializationError);
         }
-
-        let mut vec = Vec::with_capacity(P::K);
-        for i in 0..P::K {
+        let num_polys = bytes.len() / bytes_per_poly;
+        let mut vec = Vec::with_capacity(num_polys);
+        for i in 0..num_polys {
             let start = i * bytes_per_poly;
             let end = start + bytes_per_poly;
             let poly = Polynomial::<P>::decompress(&bytes[start..end], d)?;
             vec.push(poly);
         }
-
         Ok(PolyVec { vec })
     }
 
@@ -207,11 +206,12 @@ impl<P: KyberParams> PolyVec<P> {
     }
 }
 
-pub struct PolyMatrix<P: KyberParams> {
+#[derive(Default)]
+pub struct PolyMatrix<P: PolynomialParams> {
     matrix: Vec<Vec<Polynomial<P>>>,
 }
 
-impl<P: KyberParams> PolyMatrix<P> {
+impl<P: PolynomialParams> PolyMatrix<P> {
     pub fn new(rows: usize, cols: usize) -> Self {
         let mut matrix = Vec::with_capacity(rows);
         for _ in 0..rows {
@@ -256,7 +256,7 @@ impl<P: KyberParams> PolyMatrix<P> {
     }
 }
 
-pub fn sample_cbd<P: KyberParams>(eta: u32, bytes: &[u8]) -> Polynomial<P> {
+pub fn sample_cbd<P: PolynomialParams>(eta: u32, bytes: &[u8]) -> Polynomial<P> {
     let mut coeffs = vec![0i16; P::N];
     let bits_needed = eta as usize * 2;
     let bytes_needed = (bits_needed * P::N).div_ceil(8);
@@ -283,7 +283,7 @@ pub fn sample_cbd<P: KyberParams>(eta: u32, bytes: &[u8]) -> Polynomial<P> {
     Polynomial { coeffs, _phantom: std::marker::PhantomData }
 }
 
-pub fn sample_uniform<P: KyberParams>(reader: &mut dyn XofReader) -> Polynomial<P> {
+pub fn sample_uniform<P: PolynomialParams>(reader: &mut dyn XofReader) -> Polynomial<P> {
     let mut coeffs = vec![0i16; P::N];
     let mut byte_buf = [0u8; 2];
     for i in 0..P::N {
