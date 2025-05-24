@@ -14,4 +14,6 @@ pub enum QryptoError {
     SerializationError,
     #[error("Invalid parameter")]
     InvalidParameter,
+    #[error("Invalid input")]
+    InvalidInput,
 }

@@ -2,10 +2,10 @@ use error::QryptoError;
 use traits::Algorithm;
 
 pub mod algorithms;
+mod crypto;
 pub mod error;
 mod math;
 pub mod traits;
-mod util;
 
 pub fn generate_keypair<A: Algorithm>() -> Result<A::KeyPair, QryptoError> {
     A::generate_keypair()
