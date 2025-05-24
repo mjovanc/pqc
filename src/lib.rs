@@ -1,20 +1,20 @@
 use error::QryptoError;
-use traits::KEMAlgorithm;
+use traits::KEM;
 
-pub mod algorithms;
 mod crypto;
 pub mod error;
+pub mod kem;
 mod math;
 pub mod traits;
 
-pub fn generate_keypair<A: KEMAlgorithm>() -> Result<A::KeyPair, QryptoError> {
+pub fn generate_keypair<A: KEM>() -> Result<A::KeyPair, QryptoError> {
     A::generate_keypair()
 }
 
-pub fn encapsulate<A: KEMAlgorithm>(pk: &A::PublicKey) -> Result<(Vec<u8>, Vec<u8>), QryptoError> {
+pub fn encapsulate<A: KEM>(pk: &A::PublicKey) -> Result<(Vec<u8>, Vec<u8>), QryptoError> {
     A::encapsulate(pk)
 }
 
-pub fn decapsulate<A: KEMAlgorithm>(sk: &A::SecretKey, ciphertext: &[u8]) -> Result<Vec<u8>, QryptoError> {
+pub fn decapsulate<A: KEM>(sk: &A::SecretKey, ciphertext: &[u8]) -> Result<Vec<u8>, QryptoError> {
     A::decapsulate(sk, ciphertext)
 }

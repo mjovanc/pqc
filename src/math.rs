@@ -4,9 +4,9 @@ use sha3::{
 };
 
 use crate::{
-    algorithms::PolynomialParams,
     encoding_err,
     error::{EncodingErrorKind, ParameterErrorKind, QryptoError},
+    kem::PolynomialParams,
     param_err,
 };
 

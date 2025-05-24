@@ -5,7 +5,7 @@ pub trait KeyPair {
     type SecretKey;
 }
 
-pub trait KEMAlgorithm {
+pub trait KEM {
     type KeyPair: KeyPair<PublicKey = Self::PublicKey, SecretKey = Self::SecretKey>;
     type PublicKey;
     type SecretKey;

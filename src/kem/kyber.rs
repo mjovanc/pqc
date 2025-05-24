@@ -1,11 +1,11 @@
 use crate::{
-    algorithms::{Kyber512Params, KyberParams},
     crypto::{hash::hash_xof, rand::generate_random_bytes},
     encoding_err,
     error::{EncodingErrorKind, ParameterErrorKind, QryptoError},
+    kem::{Kyber512Params, KyberParams},
     math::{generate_matrix, sample_cbd, PolyVec, Polynomial},
     param_err,
-    traits::{KEMAlgorithm, KeyPair},
+    traits::{KeyPair, KEM},
 };
 use sha3::digest::{ExtendableOutput, Update};
 use sha3::{Digest as Sha3Digest, Sha3_256, Sha3_512, Shake128, Shake256};
@@ -140,7 +140,7 @@ impl<P: KyberParams> Kyber<P> {
     }
 }
 
-impl<P: KyberParams> KEMAlgorithm for Kyber<P> {
+impl<P: KyberParams> KEM for Kyber<P> {
     type KeyPair = KyberKeyPair;
     type PublicKey = Vec<u8>;
     type SecretKey = Vec<u8>;
