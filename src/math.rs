@@ -70,7 +70,7 @@ impl<P: KyberParams> Polynomial<P> {
         let mut coeffs = vec![0i16; P::N];
         let q = P::Q as u64;
         let bits_per_coeff = d as usize;
-        let bytes_needed = (P::N * bits_per_coeff + 7) / 8;
+        let bytes_needed = (P::N * bits_per_coeff).div_ceil(8);
         if bytes.len() < bytes_needed {
             return Err(crate::error::QryptoError::SerializationError);
         }
@@ -177,7 +177,7 @@ impl<P: KyberParams> PolyVec<P> {
     }
 
     pub fn decompress(bytes: &[u8], d: u32) -> Result<Self, crate::error::QryptoError> {
-        let bytes_per_poly = (P::N * d as usize + 7) / 8;
+        let bytes_per_poly = (P::N * d as usize).div_ceil(8);
         let expected_bytes = bytes_per_poly * P::K;
         if bytes.len() < expected_bytes {
             return Err(crate::error::QryptoError::SerializationError);
@@ -259,7 +259,7 @@ impl<P: KyberParams> PolyMatrix<P> {
 pub fn sample_cbd<P: KyberParams>(eta: u32, bytes: &[u8]) -> Polynomial<P> {
     let mut coeffs = vec![0i16; P::N];
     let bits_needed = eta as usize * 2;
-    let bytes_needed = (bits_needed * P::N + 7) / 8;
+    let bytes_needed = (bits_needed * P::N).div_ceil(8);
     if bytes.len() < bytes_needed {
         panic!("Insufficient random bytes for CBD");
     }

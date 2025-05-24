@@ -194,8 +194,8 @@ impl<P: KyberParams> Algorithm for Kyber<P> {
         // Serialize ciphertext: c = (u_compressed, v_compressed)
         let u_bytes = u_compressed.to_compressed_bytes(P::DU);
         let v_bytes = v_compressed.to_compressed_bytes(P::DV);
-        let u_bytes_expected = (P::K * P::N as usize * P::DU as usize) / 8;
-        let v_bytes_expected = (P::N as usize * P::DV as usize) / 8;
+        let u_bytes_expected = (P::K * P::N * P::DU as usize) / 8;
+        let v_bytes_expected = (P::N * P::DV as usize) / 8;
         if u_bytes.len() != u_bytes_expected || v_bytes.len() != v_bytes_expected {
             return Err(QryptoError::SerializationError);
         }
