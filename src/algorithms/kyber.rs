@@ -1,9 +1,11 @@
 use crate::{
     algorithms::{Kyber512Params, KyberParams},
     crypto::{hash::hash_xof, rand::generate_random_bytes},
-    error::QryptoError,
+    encoding_err,
+    error::{EncodingErrorKind, ParameterErrorKind, QryptoError},
     math::{sample_cbd, sample_uniform, PolyMatrix, PolyVec, Polynomial},
-    traits::{Algorithm, KeyPair},
+    param_err,
+    traits::{KEMAlgorithm, KeyPair},
 };
 use sha3::digest::{ExtendableOutput, Update};
 use sha3::{Digest as Sha3Digest, Sha3_256, Sha3_512, Shake128, Shake256};
@@ -49,7 +51,7 @@ pub struct Kyber<P: KyberParams> {
     _phantom: std::marker::PhantomData<P>,
 }
 
-impl<P: KyberParams> Algorithm for Kyber<P> {
+impl<P: KyberParams> KEMAlgorithm for Kyber<P> {
     type KeyPair = KyberKeyPair;
     type PublicKey = Vec<u8>;
     type SecretKey = Vec<u8>;
@@ -81,10 +83,13 @@ impl<P: KyberParams> Algorithm for Kyber<P> {
 
         // Serialize public key: (t_compressed, seed)
         let t_bytes = t_compressed.to_compressed_bytes(d_t);
-        let t_bytes_expected =
-            P::K.checked_mul(P::N).and_then(|x| x.checked_mul(d_t as usize)).map(|x| x / 8).ok_or(QryptoError::SerializationError)?;
+        let t_bytes_expected = P::K
+            .checked_mul(P::N)
+            .and_then(|x| x.checked_mul(d_t as usize))
+            .map(|x| x / 8)
+            .ok_or(encoding_err!(EncodingErrorKind::SerializationFailed))?;
         if t_bytes.len() != t_bytes_expected {
-            return Err(QryptoError::SerializationError);
+            return Err(encoding_err!(EncodingErrorKind::SerializationFailed));
         }
 
         let mut pk = vec![0u8; P::PK_SIZE];
@@ -103,7 +108,7 @@ impl<P: KyberParams> Algorithm for Kyber<P> {
         let s_bytes = s_compressed.to_compressed_bytes(d_s);
         let s_bytes_expected = (P::K * P::N * 12) / 8;
         if s_bytes.len() != s_bytes_expected {
-            return Err(QryptoError::SerializationError);
+            return Err(encoding_err!(EncodingErrorKind::SerializationFailed));
         }
 
         let sk_t_offset = s_bytes_expected;
@@ -122,7 +127,7 @@ impl<P: KyberParams> Algorithm for Kyber<P> {
 
     fn encapsulate(pk: &Self::PublicKey) -> Result<(Vec<u8>, Vec<u8>), QryptoError> {
         if pk.len() != P::PK_SIZE {
-            return Err(QryptoError::InvalidInput);
+            return Err(param_err!(ParameterErrorKind::InvalidVectorLength { expected: P::PK_SIZE, actual: pk.len() }));
         }
 
         let m = generate_random_bytes(32)?;
@@ -142,7 +147,7 @@ impl<P: KyberParams> Algorithm for Kyber<P> {
         // Parse pk = (t_compressed, ρ)
         let t_bytes_expected = (P::K * P::N * 12) / 8; // d_t = 12
         if pk.len() < t_bytes_expected + 32 {
-            return Err(QryptoError::SerializationError);
+            return Err(encoding_err!(EncodingErrorKind::DeserializationFailed));
         }
         let t_compressed_bytes = &pk[0..t_bytes_expected];
         let rho = hash_xof(&pk[t_bytes_expected..t_bytes_expected + 32], 32);
@@ -197,7 +202,7 @@ impl<P: KyberParams> Algorithm for Kyber<P> {
         let u_bytes_expected = (P::K * P::N * P::DU as usize) / 8;
         let v_bytes_expected = (P::N * P::DV as usize) / 8;
         if u_bytes.len() != u_bytes_expected || v_bytes.len() != v_bytes_expected {
-            return Err(QryptoError::SerializationError);
+            return Err(encoding_err!(EncodingErrorKind::SerializationFailed));
         }
         let mut ciphertext = Vec::with_capacity(u_bytes_expected + v_bytes_expected);
         ciphertext.extend_from_slice(&u_bytes);
@@ -218,10 +223,10 @@ impl<P: KyberParams> Algorithm for Kyber<P> {
 
     fn decapsulate(sk: &Self::SecretKey, ciphertext: &[u8]) -> Result<Vec<u8>, QryptoError> {
         if sk.len() != P::SK_SIZE {
-            return Err(QryptoError::InvalidInput);
+            return Err(param_err!(ParameterErrorKind::InvalidKeyLength { expected: P::SK_SIZE, actual: sk.len() }));
         }
         if ciphertext.len() != P::CT_SIZE {
-            return Err(QryptoError::InvalidInput);
+            return Err(param_err!(ParameterErrorKind::InvalidCiphertextLength { expected: P::CT_SIZE, actual: ciphertext.len() }));
         }
 
         // Parse secret key: sk = (s_compressed, H(pk), z, pk)
@@ -230,7 +235,7 @@ impl<P: KyberParams> Algorithm for Kyber<P> {
         let sk_hash_offset = sk_t_offset + 32;
         let sk_z_offset = sk_hash_offset + 32;
         if sk.len() < sk_z_offset + P::PK_SIZE {
-            return Err(QryptoError::SerializationError);
+            return Err(encoding_err!(EncodingErrorKind::DeserializationFailed));
         }
 
         let s_compressed_bytes = &sk[0..sk_t_offset];
@@ -241,13 +246,13 @@ impl<P: KyberParams> Algorithm for Kyber<P> {
         // Verify pk_hash
         let computed_pk_hash = Sha3_256::digest(pk);
         if computed_pk_hash.as_slice() != pk_hash {
-            return Err(QryptoError::InvalidInput);
+            return Err(param_err!(ParameterErrorKind::InvalidHash));
         }
 
         // Parse public key: pk = (t_compressed, ρ)
         let t_bytes_expected = (P::K * P::N * 12) / 8; // d_t = 12
         if pk.len() < t_bytes_expected + 32 {
-            return Err(QryptoError::SerializationError);
+            return Err(encoding_err!(EncodingErrorKind::DeserializationFailed));
         }
         let t_compressed_bytes = &pk[0..t_bytes_expected];
         let rho = hash_xof(&pk[t_bytes_expected..t_bytes_expected + 32], 32);
@@ -256,7 +261,7 @@ impl<P: KyberParams> Algorithm for Kyber<P> {
         let u_bytes_expected = (P::K * P::N * P::DU as usize) / 8;
         let v_bytes_expected = (P::N * P::DV as usize) / 8;
         if ciphertext.len() < u_bytes_expected + v_bytes_expected {
-            return Err(QryptoError::SerializationError);
+            return Err(encoding_err!(EncodingErrorKind::DeserializationFailed));
         }
         let u_compressed_bytes = &ciphertext[0..u_bytes_expected];
         let v_compressed_bytes = &ciphertext[u_bytes_expected..u_bytes_expected + v_bytes_expected];

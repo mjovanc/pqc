@@ -17,7 +17,7 @@ pub mod rand {
 
     pub fn generate_random_bytes(len: usize) -> Result<Vec<u8>, QryptoError> {
         let mut bytes = vec![0u8; len];
-        OsRng.try_fill_bytes(&mut bytes).map_err(|_| QryptoError::RandomGenerationFailed)?;
+        OsRng.try_fill_bytes(&mut bytes).map_err(|e| QryptoError::RandomError(format!("Failed to generate random bytes: {}", e)))?;
         Ok(bytes)
     }
 }

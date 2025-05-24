@@ -1,6 +1,11 @@
 use sha3::digest::XofReader;
 
-use crate::{algorithms::PolynomialParams, error::QryptoError};
+use crate::{
+    algorithms::PolynomialParams,
+    encoding_err,
+    error::{EncodingErrorKind, ParameterErrorKind, QryptoError},
+    param_err,
+};
 
 pub struct Polynomial<P: PolynomialParams> {
     coeffs: Vec<i16>,
@@ -72,7 +77,7 @@ impl<P: PolynomialParams> Polynomial<P> {
         let bits_per_coeff = d as usize;
         let bytes_needed = (P::N * bits_per_coeff).div_ceil(8);
         if bytes.len() < bytes_needed {
-            return Err(QryptoError::SerializationError);
+            return Err(encoding_err!(EncodingErrorKind::DeserializationFailed));
         }
 
         let mut bit_idx = 0;
@@ -84,7 +89,7 @@ impl<P: PolynomialParams> Polynomial<P> {
 
             while bits_read < bits_to_read {
                 if byte_idx >= bytes.len() {
-                    return Err(QryptoError::SerializationError);
+                    return Err(encoding_err!(EncodingErrorKind::DeserializationFailed));
                 }
                 let bits_available = 8 - (bit_idx % 8);
                 let bits_needed = bits_to_read - bits_read;
@@ -103,7 +108,7 @@ impl<P: PolynomialParams> Polynomial<P> {
             let scaled = y.wrapping_mul(q) + (1u64 << (d - 1));
             let decompressed = scaled >> d;
             if decompressed >= q {
-                return Err(QryptoError::SerializationError);
+                return Err(encoding_err!(EncodingErrorKind::DeserializationFailed));
             }
             coeffs[i] = decompressed as i16;
         }
@@ -180,7 +185,7 @@ impl<P: PolynomialParams> PolyVec<P> {
     pub fn decompress(bytes: &[u8], d: u32) -> Result<Self, QryptoError> {
         let bytes_per_poly = (P::N * d as usize).div_ceil(8);
         if bytes.len() % bytes_per_poly != 0 {
-            return Err(QryptoError::SerializationError);
+            return Err(encoding_err!(EncodingErrorKind::DeserializationFailed));
         }
         let num_polys = bytes.len() / bytes_per_poly;
         let mut vec = Vec::with_capacity(num_polys);
@@ -195,7 +200,7 @@ impl<P: PolynomialParams> PolyVec<P> {
 
     pub fn dot_product(&self, other: &Self) -> Result<Polynomial<P>, QryptoError> {
         if self.vec.len() != other.vec.len() {
-            return Err(QryptoError::InvalidInput);
+            return Err(param_err!(ParameterErrorKind::InvalidVectorLength { expected: self.vec.len(), actual: other.vec.len() }));
         }
         let mut result = Polynomial::new();
         for i in 0..self.vec.len() {
