@@ -38,7 +38,6 @@ pub struct Kyber<P: KyberParams> {
 }
 
 impl<P: KyberParams> Kyber<P> {
-    // Helper: Sample a PolyVec from CBD with given eta
     fn sample_polyvec_cbd(eta: u32, k: usize) -> Result<PolyVec<P>, QryptoError> {
         let mut polyvec = PolyVec::<P>::new(k);
         for i in 0..k {
@@ -48,7 +47,6 @@ impl<P: KyberParams> Kyber<P> {
         Ok(polyvec)
     }
 
-    // Helper: Compress a PolyVec to a given number of bits per coefficient
     fn compress_polyvec(polyvec: &PolyVec<P>, bits: u32) -> PolyVec<P> {
         let mut compressed = PolyVec::<P>::new(polyvec.get_vec().len());
         for i in 0..polyvec.get_vec().len() {
@@ -57,7 +55,6 @@ impl<P: KyberParams> Kyber<P> {
         compressed
     }
 
-    // Helper: Serialize public key (t_compressed, seed)
     fn serialize_public_key(t_compressed: &PolyVec<P>, seed: &[u8], d_t: u32) -> Result<Vec<u8>, QryptoError> {
         let t_bytes = t_compressed.to_compressed_bytes(d_t);
         let t_bytes_expected = P::K
@@ -79,7 +76,6 @@ impl<P: KyberParams> Kyber<P> {
         Ok(pk)
     }
 
-    // Helper: Serialize secret key (s_compressed, pk_hash, z, pk)
     fn serialize_secret_key(s: &PolyVec<P>, pk: &[u8], d_s: u32) -> Result<Vec<u8>, QryptoError> {
         let s_compressed = Self::compress_polyvec(s, d_s);
         let s_bytes = s_compressed.to_compressed_bytes(d_s);
@@ -102,7 +98,6 @@ impl<P: KyberParams> Kyber<P> {
         Ok(sk)
     }
 
-    // Helper: Parse public key into (t_compressed_bytes, rho)
     fn parse_public_key(pk: &[u8]) -> Result<(&[u8], Vec<u8>), QryptoError> {
         let t_bytes_expected = (P::K * P::N * 12) / 8; // d_t = 12
         if pk.len() < t_bytes_expected + 32 {
@@ -113,7 +108,6 @@ impl<P: KyberParams> Kyber<P> {
         Ok((t_compressed_bytes, rho))
     }
 
-    // Helper: Parse secret key into (s_compressed_bytes, pk_hash, z, pk)
     fn parse_secret_key(sk: &[u8]) -> Result<(&[u8], &[u8], &[u8], &[u8]), QryptoError> {
         let s_bytes_expected = (P::K * P::N * 12) / 8; // d_s = 12
         let sk_t_offset = s_bytes_expected;
@@ -125,7 +119,6 @@ impl<P: KyberParams> Kyber<P> {
         Ok((&sk[0..sk_t_offset], &sk[sk_t_offset..sk_hash_offset], &sk[sk_hash_offset..sk_z_offset], &sk[sk_z_offset..sk_z_offset + P::PK_SIZE]))
     }
 
-    // Helper: Parse ciphertext into (u_compressed_bytes, v_compressed_bytes)
     fn parse_ciphertext(ciphertext: &[u8]) -> Result<(&[u8], &[u8]), QryptoError> {
         let u_bytes_expected = (P::K * P::N * P::DU as usize) / 8;
         let v_bytes_expected = (P::N * P::DV as usize) / 8;
@@ -135,7 +128,6 @@ impl<P: KyberParams> Kyber<P> {
         Ok((&ciphertext[0..u_bytes_expected], &ciphertext[u_bytes_expected..u_bytes_expected + v_bytes_expected]))
     }
 
-    // Helper: Compute shared secret using KDF
     fn compute_shared_secret(k_bar_or_z: &[u8], c_hash: &[u8]) -> Result<Vec<u8>, QryptoError> {
         let mut kdf_input = Vec::with_capacity(32 + 32);
         kdf_input.extend_from_slice(k_bar_or_z);
