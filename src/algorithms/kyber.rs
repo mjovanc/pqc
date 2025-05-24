@@ -381,7 +381,7 @@ mod tests {
     fn kyber512_encapsulate() {
         let keypair = generate_keypair::<Kyber512>().expect("Keypair generation failed");
         let (ciphertext, shared_secret) = encapsulate::<Kyber512>(keypair.public_key()).expect("msg");
-        assert_eq!(ciphertext.len(), 768, "Ciphertext size incorrect");
+        assert_eq!(ciphertext.len(), Kyber512Params::CT_SIZE, "Ciphertext size incorrect");
         assert_eq!(shared_secret.len(), 32, "Shared secret size incorrect");
     }
 
@@ -389,7 +389,7 @@ mod tests {
     fn kyber768_encapsulate() {
         let keypair = generate_keypair::<Kyber768>().expect("Keypair generation failed");
         let (ciphertext, shared_secret) = encapsulate::<Kyber768>(keypair.public_key()).expect("Encapsulation failed");
-        assert_eq!(ciphertext.len(), 1088, "Ciphertext size incorrect");
+        assert_eq!(ciphertext.len(), Kyber768Params::CT_SIZE, "Ciphertext size incorrect");
         assert_eq!(shared_secret.len(), 32, "Shared secret size incorrect");
     }
 
@@ -397,7 +397,7 @@ mod tests {
     fn kyber1024_encapsulate() {
         let keypair = generate_keypair::<Kyber1024>().expect("Keypair generation failed");
         let (ciphertext, shared_secret) = encapsulate::<Kyber1024>(keypair.public_key()).expect("Encapsulation failed");
-        assert_eq!(ciphertext.len(), 1568, "Ciphertext size incorrect");
+        assert_eq!(ciphertext.len(), Kyber1024Params::CT_SIZE, "Ciphertext size incorrect");
         assert_eq!(shared_secret.len(), 32, "Shared secret size incorrect");
     }
 }
