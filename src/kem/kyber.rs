@@ -1,12 +1,13 @@
 use crate::{
-    crypto::{hash::hash_xof, rand::generate_random_bytes},
+    crypto::hash::hash_xof,
     encoding_err,
-    error::{EncodingErrorKind, ParameterErrorKind, QryptoError},
+    error::{EncodingErrorKind, ParameterErrorKind, QryptoError, RandomErrorKind},
     kem::{Kyber512Params, KyberParams},
     math::{generate_matrix, sample_cbd, PolyVec, Polynomial},
-    param_err,
+    param_err, random_err,
     traits::{KeyPair, KEM},
 };
+use rand::{rng, RngCore};
 use sha3::digest::{ExtendableOutput, Update};
 use sha3::{Digest as Sha3Digest, Sha3_256, Sha3_512, Shake128, Shake256};
 
@@ -38,10 +39,23 @@ pub struct Kyber<P: KyberParams> {
 }
 
 impl<P: KyberParams> Kyber<P> {
-    fn sample_polyvec_cbd(eta: u32, k: usize) -> Result<PolyVec<P>, QryptoError> {
+    fn sample_polyvec_cbd(eta: u32, k: usize, seed: Option<&[u8]>, mut rng: Option<&mut dyn RngCore>) -> Result<PolyVec<P>, QryptoError> {
         let mut polyvec = PolyVec::<P>::new(k);
         for i in 0..k {
-            let noise = generate_random_bytes((eta as usize * P::N).div_ceil(4))?;
+            let noise = if let Some(seed) = seed {
+                let mut shake = Shake128::default();
+                shake.update(seed);
+                shake.update(&[i as u8]);
+                let mut noise = vec![0u8; (eta as usize * P::N).div_ceil(4)];
+                shake.finalize_xof_into(&mut noise);
+                noise
+            } else if let Some(ref mut rng) = rng {
+                let mut noise = vec![0u8; (eta as usize * P::N).div_ceil(4)];
+                rng.fill_bytes(&mut noise);
+                noise
+            } else {
+                return Err(random_err!(RandomErrorKind::GenerationFailed));
+            };
             polyvec.get_vec_mut()[i] = sample_cbd::<P>(eta, &noise);
         }
         Ok(polyvec)
@@ -76,7 +90,13 @@ impl<P: KyberParams> Kyber<P> {
         Ok(pk)
     }
 
-    fn serialize_secret_key(s: &PolyVec<P>, pk: &[u8], d_s: u32) -> Result<Vec<u8>, QryptoError> {
+    fn serialize_secret_key(s: &PolyVec<P>, pk: &[u8], d_s: u32, rng: &mut dyn RngCore) -> Result<Vec<u8>, QryptoError> {
+        let mut z = [0u8; 32];
+        rng.fill_bytes(&mut z);
+        Self::serialize_secret_key_with_z(s, pk, d_s, &z)
+    }
+
+    fn serialize_secret_key_with_z(s: &PolyVec<P>, pk: &[u8], d_s: u32, z: &[u8]) -> Result<Vec<u8>, QryptoError> {
         let s_compressed = Self::compress_polyvec(s, d_s);
         let s_bytes = s_compressed.to_compressed_bytes(d_s);
         let s_bytes_expected = (P::K * P::N * 12) / 8;
@@ -92,8 +112,7 @@ impl<P: KyberParams> Kyber<P> {
         sk[0..sk_t_offset].copy_from_slice(&s_bytes);
         let pk_hash = Sha3_256::digest(pk);
         sk[sk_t_offset..sk_hash_offset].copy_from_slice(&pk_hash);
-        let z = generate_random_bytes(32)?;
-        sk[sk_hash_offset..sk_z_offset].copy_from_slice(&z);
+        sk[sk_hash_offset..sk_z_offset].copy_from_slice(z);
         sk[sk_z_offset..P::SK_SIZE].copy_from_slice(pk);
         Ok(sk)
     }
@@ -146,26 +165,59 @@ impl<P: KyberParams> KEM for Kyber<P> {
     type SecretKey = Vec<u8>;
 
     fn generate_keypair() -> Result<Self::KeyPair, QryptoError> {
-        let seed = generate_random_bytes(32)?;
+        let mut rng = rng();
+        Self::generate_keypair_with_rng(&mut rng)
+    }
+
+    fn generate_keypair_with_seed(seed: &[u8]) -> Result<Self::KeyPair, QryptoError> {
+        // Derive 32-byte rho from the input seed (typically 48 bytes in KATs)
+        let rho = hash_xof(seed, 32);
+        let a = generate_matrix::<P>(&rho, P::K, P::K);
+
+        let s_seed = hash_xof(&[seed, b"s"].concat(), 32);
+        let s = Self::sample_polyvec_cbd(P::ETA1, P::K, Some(&s_seed), None)?;
+        let e_seed = hash_xof(&[seed, b"e"].concat(), 32);
+        let e = Self::sample_polyvec_cbd(P::ETA1, P::K, Some(&e_seed), None)?;
+
+        let t = a.mul_vec(&s).add(&e);
+        let t_compressed = Self::compress_polyvec(&t, 12); // d_t = 12
+        let pk = Self::serialize_public_key(&t_compressed, &rho, 12)?;
+
+        let z_seed = hash_xof(&[seed, b"z"].concat(), 32);
+        let sk = Self::serialize_secret_key_with_z(&s, &pk, 12, &z_seed)?; // d_s = 12
+
+        Ok(KyberKeyPair { public_key: pk, secret_key: sk })
+    }
+
+    fn generate_keypair_with_rng(rng: &mut dyn RngCore) -> Result<Self::KeyPair, QryptoError> {
+        let mut seed = [0u8; 32];
+        rng.fill_bytes(&mut seed);
         let a = generate_matrix::<P>(&seed, P::K, P::K);
 
-        let s = Self::sample_polyvec_cbd(P::ETA1, P::K)?;
-        let e = Self::sample_polyvec_cbd(P::ETA1, P::K)?;
+        let s = Self::sample_polyvec_cbd(P::ETA1, P::K, None, Some(rng))?;
+        let e = Self::sample_polyvec_cbd(P::ETA1, P::K, None, Some(rng))?;
 
         let t = a.mul_vec(&s).add(&e);
         let t_compressed = Self::compress_polyvec(&t, 12); // d_t = 12
         let pk = Self::serialize_public_key(&t_compressed, &seed, 12)?;
-        let sk = Self::serialize_secret_key(&s, &pk, 12)?; // d_s = 12
+
+        let sk = Self::serialize_secret_key(&s, &pk, 12, rng)?; // d_s = 12
 
         Ok(KyberKeyPair { public_key: pk, secret_key: sk })
     }
 
     fn encapsulate(pk: &Self::PublicKey) -> Result<(Vec<u8>, Vec<u8>), QryptoError> {
+        let mut rng = rng();
+        Self::encapsulate_with_rng(pk, &mut rng)
+    }
+
+    fn encapsulate_with_rng(pk: &Self::PublicKey, rng: &mut dyn RngCore) -> Result<(Vec<u8>, Vec<u8>), QryptoError> {
         if pk.len() != P::PK_SIZE {
             return Err(param_err!(ParameterErrorKind::InvalidVectorLength { expected: P::PK_SIZE, actual: pk.len() }));
         }
 
-        let m = generate_random_bytes(32)?;
+        let mut m = [0u8; 32];
+        rng.fill_bytes(&mut m);
         let m_bar = Sha3_256::digest(&m);
         let pk_hash = Sha3_256::digest(pk);
         let mut g_input = Vec::with_capacity(32 + 32);
@@ -188,8 +240,9 @@ impl<P: KyberParams> KEM for Kyber<P> {
             r_vec.get_vec_mut()[i] = sample_cbd::<P>(P::ETA1, &noise);
         }
 
-        let e1 = Self::sample_polyvec_cbd(P::ETA2, P::K)?;
-        let e2_noise = generate_random_bytes((P::ETA2 as usize * P::N).div_ceil(4))?;
+        let e1 = Self::sample_polyvec_cbd(P::ETA2, P::K, None, Some(rng))?;
+        let mut e2_noise = vec![0u8; (P::ETA2 as usize * P::N).div_ceil(4)];
+        rng.fill_bytes(&mut e2_noise);
         let e2 = sample_cbd::<P>(P::ETA2, &e2_noise);
 
         let a_transpose = a.transpose();
@@ -261,8 +314,10 @@ impl<P: KyberParams> KEM for Kyber<P> {
             shake.finalize_xof_into(&mut noise);
             r_vec.get_vec_mut()[i] = sample_cbd::<P>(P::ETA1, &noise);
         }
-        let e1 = Self::sample_polyvec_cbd(P::ETA2, P::K)?;
-        let e2_noise = generate_random_bytes((P::ETA2 as usize * P::N).div_ceil(4))?;
+        let e1 = Self::sample_polyvec_cbd(P::ETA2, P::K, None, None)?;
+        let mut e2_noise = vec![0u8; (P::ETA2 as usize * P::N).div_ceil(4)];
+        let mut rng = rng();
+        rng.fill_bytes(&mut e2_noise);
         let e2 = sample_cbd::<P>(P::ETA2, &e2_noise);
         let a_transpose = a.transpose();
         let u_prime = a_transpose.mul_vec(&r_vec).add(&e1);
@@ -296,45 +351,45 @@ mod tests {
 
     #[test]
     fn kyber512_generate_keypair() {
-        let keypair = generate_keypair::<Kyber512>().expect("Keypair generation failed");
+        let keypair = generate_keypair::<Kyber512>(None).expect("Keypair generation failed");
         assert_eq!(keypair.public_key().len(), Kyber512Params::PK_SIZE);
         assert_eq!(keypair.secret_key().len(), Kyber512Params::SK_SIZE);
     }
 
     #[test]
     fn kyber768_generate_keypair() {
-        let keypair = generate_keypair::<Kyber768>().expect("Keypair generation failed");
+        let keypair = generate_keypair::<Kyber768>(None).expect("Keypair generation failed");
         assert_eq!(keypair.public_key().len(), Kyber768Params::PK_SIZE);
         assert_eq!(keypair.secret_key().len(), Kyber768Params::SK_SIZE);
     }
 
     #[test]
     fn kyber1024_generate_keypair() {
-        let keypair = generate_keypair::<Kyber1024>().expect("Keypair generation failed");
+        let keypair = generate_keypair::<Kyber1024>(None).expect("Keypair generation failed");
         assert_eq!(keypair.public_key().len(), Kyber1024Params::PK_SIZE);
         assert_eq!(keypair.secret_key().len(), Kyber1024Params::SK_SIZE);
     }
 
     #[test]
     fn kyber512_encapsulate() {
-        let keypair = generate_keypair::<Kyber512>().expect("Keypair generation failed");
-        let (ciphertext, shared_secret) = encapsulate::<Kyber512>(keypair.public_key()).expect("Encapsulation failed");
+        let keypair = generate_keypair::<Kyber512>(None).expect("Keypair generation failed");
+        let (ciphertext, shared_secret) = encapsulate::<Kyber512>(keypair.public_key(), None).expect("Encapsulation failed");
         assert_eq!(ciphertext.len(), Kyber512Params::CT_SIZE, "Ciphertext size incorrect");
         assert_eq!(shared_secret.len(), 32, "Shared secret size incorrect");
     }
 
     #[test]
     fn kyber768_encapsulate() {
-        let keypair = generate_keypair::<Kyber768>().expect("Keypair generation failed");
-        let (ciphertext, shared_secret) = encapsulate::<Kyber768>(keypair.public_key()).expect("Encapsulation failed");
+        let keypair = generate_keypair::<Kyber768>(None).expect("Keypair generation failed");
+        let (ciphertext, shared_secret) = encapsulate::<Kyber768>(keypair.public_key(), None).expect("Encapsulation failed");
         assert_eq!(ciphertext.len(), Kyber768Params::CT_SIZE, "Ciphertext size incorrect");
         assert_eq!(shared_secret.len(), 32, "Shared secret size incorrect");
     }
 
     #[test]
     fn kyber1024_encapsulate() {
-        let keypair = generate_keypair::<Kyber1024>().expect("Keypair generation failed");
-        let (ciphertext, shared_secret) = encapsulate::<Kyber1024>(keypair.public_key()).expect("Encapsulation failed");
+        let keypair = generate_keypair::<Kyber1024>(None).expect("Keypair generation failed");
+        let (ciphertext, shared_secret) = encapsulate::<Kyber1024>(keypair.public_key(), None).expect("Encapsulation failed");
         assert_eq!(ciphertext.len(), Kyber1024Params::CT_SIZE, "Ciphertext size incorrect");
         assert_eq!(shared_secret.len(), 32, "Shared secret size incorrect");
     }

@@ -46,8 +46,12 @@ pub enum QryptoError {
     },
 
     /// Errors related to random number generation
-    #[error("Random generation error: {0}")]
-    RandomError(String),
+    #[error("Random generation error: {kind}")]
+    RandomError {
+        kind: RandomErrorKind,
+        #[source]
+        source: Option<Box<dyn std::error::Error + Send + Sync>>,
+    },
 
     /// Generic error for when no specific error type fits
     #[error("Internal error: {0}")]
@@ -135,6 +139,12 @@ pub enum HybridErrorKind {
     IncompatibleAlgorithms,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum RandomErrorKind {
+    MissingRng,
+    GenerationFailed,
+}
+
 // Implement Display for all error kinds
 impl fmt::Display for KeyErrorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -209,6 +219,15 @@ impl fmt::Display for HybridErrorKind {
     }
 }
 
+impl fmt::Display for RandomErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MissingRng => write!(f, "Missing random number generator"),
+            Self::GenerationFailed => write!(f, "Random number generation failed"),
+        }
+    }
+}
+
 impl QryptoError {
     /// Creates a new key error
     pub fn key_error(kind: KeyErrorKind) -> Self {
@@ -233,6 +252,11 @@ impl QryptoError {
     /// Creates a new hybrid error
     pub fn hybrid_error(kind: HybridErrorKind) -> Self {
         QryptoError::HybridError { kind, source: None }
+    }
+
+    /// Creates a new random error
+    pub fn random_error(kind: RandomErrorKind) -> Self {
+        QryptoError::RandomError { kind, source: None }
     }
 }
 
@@ -269,5 +293,12 @@ macro_rules! algo_err {
 macro_rules! key_err {
     ($kind:expr) => {
         QryptoError::key_error($kind)
+    };
+}
+
+#[macro_export]
+macro_rules! random_err {
+    ($kind:expr) => {
+        QryptoError::random_error($kind)
     };
 }

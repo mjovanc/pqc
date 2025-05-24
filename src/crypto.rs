@@ -12,12 +12,15 @@ pub mod hash {
 }
 
 pub mod rand {
-    use crate::error::QryptoError;
+    use crate::{
+        error::{QryptoError, RandomErrorKind},
+        random_err,
+    };
     use ::rand::{rngs::OsRng, TryRngCore};
 
     pub fn generate_random_bytes(len: usize) -> Result<Vec<u8>, QryptoError> {
         let mut bytes = vec![0u8; len];
-        OsRng.try_fill_bytes(&mut bytes).map_err(|e| QryptoError::RandomError(format!("Failed to generate random bytes: {}", e)))?;
+        OsRng.try_fill_bytes(&mut bytes).map_err(|_| random_err!(RandomErrorKind::GenerationFailed))?;
         Ok(bytes)
     }
 }

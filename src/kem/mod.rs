@@ -1,6 +1,6 @@
 pub mod kyber;
 
-pub use kyber::Kyber512;
+pub use kyber::{Kyber1024, Kyber512, Kyber768};
 
 pub trait PolynomialParams {
     const N: usize; // Polynomial degree
@@ -13,6 +13,8 @@ pub trait KyberParams: PolynomialParams {
     const ETA2: u32; // Noise parameter for encapsulation
     const DU: u32; // Compression bits for u
     const DV: u32; // Compression bits for v
+    const DT: u32; // Compression bits for t
+    const DS: u32; // Compression bits for s
     const PK_SIZE: usize; // Public key size
     const SK_SIZE: usize; // Secret key size
     const CT_SIZE: usize; // Ciphertext size
@@ -29,6 +31,8 @@ impl KyberParams for Kyber512Params {
     const ETA2: u32 = 2;
     const DU: u32 = 10;
     const DV: u32 = 4;
+    const DT: u32 = 10;
+    const DS: u32 = 10;
     const PK_SIZE: usize = 800;
     const SK_SIZE: usize = 1632;
     const CT_SIZE: usize = 768;
@@ -45,6 +49,8 @@ impl KyberParams for Kyber768Params {
     const ETA2: u32 = 2;
     const DU: u32 = 10;
     const DV: u32 = 4;
+    const DT: u32 = 10;
+    const DS: u32 = 10;
     const PK_SIZE: usize = 1184;
     const SK_SIZE: usize = 2400;
     const CT_SIZE: usize = 1088;
@@ -61,6 +67,8 @@ impl KyberParams for Kyber1024Params {
     const ETA2: u32 = 2;
     const DU: u32 = 11;
     const DV: u32 = 5;
+    const DT: u32 = 11;
+    const DS: u32 = 11;
     const PK_SIZE: usize = 1568;
     const SK_SIZE: usize = 3168;
     const CT_SIZE: usize = 1568;
