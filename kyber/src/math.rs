@@ -39,7 +39,7 @@ impl<P: PolynomialParams> Polynomial<P> {
         self.coeffs.len()
     }
 
-    pub fn get_coeff(&self, index: usize) -> i16 {
+    pub fn _get_coeff(&self, index: usize) -> i16 {
         self.coeffs[index]
     }
 

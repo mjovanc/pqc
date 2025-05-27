@@ -7,7 +7,6 @@ use rand::TryRngCore;
 use sha3::digest::{ExtendableOutput, Update};
 use sha3::Digest;
 use sha3::{Sha3_256, Sha3_512, Shake128, Shake256};
-use std::ops::Sub;
 
 pub fn generate_keypair<P: KyberParams>() -> Result<(super::PublicKey, super::SecretKey), KyberError>
 {
