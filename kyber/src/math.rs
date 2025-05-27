@@ -1,3 +1,4 @@
+use log::debug;
 use sha3::{
     digest::{ExtendableOutput, Update, XofReader},
     Shake128,
@@ -39,8 +40,20 @@ impl<P: PolynomialParams> Polynomial<P> {
         self.coeffs.len()
     }
 
-    pub fn _get_coeff(&self, index: usize) -> i16 {
-        self.coeffs[index]
+    pub fn get_coeffs(&self) -> &[i16] {
+        &self.coeffs
+    }
+
+    pub fn reduce_mod_q(&self) -> Self {
+        let mut result = Polynomial::new();
+        for i in 0..P::N {
+            let mut coeff = self.coeffs[i] as i32 % P::Q as i32;
+            if coeff < 0 {
+                coeff += P::Q as i32;
+            }
+            result.coeffs[i] = coeff as i16;
+        }
+        result
     }
 
     pub fn add(&self, other: &Self) -> Self {
@@ -85,11 +98,31 @@ impl<P: PolynomialParams> Polynomial<P> {
         let d_mask = (1u64 << d) - 1;
         for i in 0..P::N {
             let coeff = self.coeffs[i] as i64;
-            let shift = 1u64 << d;
-            let scaled = (coeff as u64).wrapping_mul(shift) + q / 2;
-            let c = (scaled / q) & d_mask;
+            // Ensure coefficient is in [0, q)
+            let coeff = if coeff < 0 {
+                coeff + P::Q as i64
+            } else {
+                coeff
+            } % P::Q as i64;
+            let c = if d == 1 {
+                // Map to 0 if closer to 0, 1 if closer to q/2
+                let q = P::Q as i64;
+                if coeff < q / 4 {
+                    0
+                } else {
+                    1
+                }
+            } else {
+                let scaled = ((coeff as u64 * (1u64 << d)) + (q / 2)) / q;
+                scaled & d_mask
+            };
             result.coeffs[i] = c as i16;
         }
+        debug!(
+            "compress(d={}) output coefficients: {:?}",
+            d,
+            result.get_coeffs()
+        );
         result
     }
 
@@ -133,8 +166,17 @@ impl<P: PolynomialParams> Polynomial<P> {
                 }
             }
 
-            let scaled = y.wrapping_mul(q) + (1u64 << (d - 1));
-            let decompressed = scaled >> d;
+            let decompressed = if d == 1 {
+                // For d=1, map 0 to 0, 1 to q/2
+                if y == 0 {
+                    0
+                } else {
+                    (q / 2) as u64
+                }
+            } else {
+                // General case for d > 1
+                (y * q + (1u64 << (d - 1))) >> d
+            };
             if decompressed >= q {
                 return Err(KyberError::DeserializationError(
                     "Decompressed coefficient too large".to_string(),
@@ -150,6 +192,11 @@ impl<P: PolynomialParams> Polynomial<P> {
     }
 
     pub fn to_compressed_bytes(&self, d: u32) -> Vec<u8> {
+        debug!(
+            "to_compressed_bytes(d={}) input coefficients: {:?}",
+            d,
+            self.get_coeffs()
+        );
         let mut bytes = Vec::new();
         let mut buffer = 0u64;
         let mut bits_in_buffer = 0u32;
@@ -278,7 +325,7 @@ impl<P: PolynomialParams> PolyVec<P> {
             let prod = self.vec[i].mul(&other.vec[i]);
             result = result.add(&prod);
         }
-        Ok(result)
+        Ok(result.reduce_mod_q()) // Ensure result is reduced
     }
 }
 
