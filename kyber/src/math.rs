@@ -4,7 +4,7 @@ use sha3::{
 };
 use std::ops::Sub;
 
-use crate::{error::QryptoError, params::PolynomialParams};
+use crate::{error::KyberError, params::PolynomialParams};
 
 #[derive(Debug)]
 pub struct Polynomial<P: PolynomialParams> {
@@ -77,13 +77,13 @@ impl<P: PolynomialParams> Polynomial<P> {
         result
     }
 
-    pub fn decompress(bytes: &[u8], d: u32) -> Result<Self, QryptoError> {
+    pub fn decompress(bytes: &[u8], d: u32) -> Result<Self, KyberError> {
         let mut coeffs = vec![0i16; P::N];
         let q = P::Q as u64;
         let bits_per_coeff = d as usize;
         let bytes_needed = (P::N * bits_per_coeff).div_ceil(8);
         if bytes.len() < bytes_needed {
-            return Err(QryptoError::DeserializationFailed(format!(
+            return Err(KyberError::DeserializationFailed(format!(
                 "Expected at least {} bytes, got {}",
                 bytes_needed,
                 bytes.len()
@@ -99,7 +99,7 @@ impl<P: PolynomialParams> Polynomial<P> {
 
             while bits_read < bits_to_read {
                 if byte_idx >= bytes.len() {
-                    return Err(QryptoError::DeserializationFailed(
+                    return Err(KyberError::DeserializationFailed(
                         "Insufficient bytes for decompression".to_string(),
                     ));
                 }
@@ -120,7 +120,7 @@ impl<P: PolynomialParams> Polynomial<P> {
             let scaled = y.wrapping_mul(q) + (1u64 << (d - 1));
             let decompressed = scaled >> d;
             if decompressed >= q {
-                return Err(QryptoError::DeserializationFailed(
+                return Err(KyberError::DeserializationFailed(
                     "Decompressed coefficient too large".to_string(),
                 ));
             }
@@ -231,10 +231,10 @@ impl<P: PolynomialParams> PolyVec<P> {
         bytes
     }
 
-    pub fn decompress(bytes: &[u8], d: u32) -> Result<Self, QryptoError> {
+    pub fn decompress(bytes: &[u8], d: u32) -> Result<Self, KyberError> {
         let bytes_per_poly = (P::N * d as usize).div_ceil(8);
         if bytes.len() % bytes_per_poly != 0 {
-            return Err(QryptoError::DeserializationFailed(
+            return Err(KyberError::DeserializationFailed(
                 "Invalid byte length for polyvec".to_string(),
             ));
         }
@@ -249,9 +249,9 @@ impl<P: PolynomialParams> PolyVec<P> {
         Ok(PolyVec { vec })
     }
 
-    pub fn dot_product(&self, other: &Self) -> Result<Polynomial<P>, QryptoError> {
+    pub fn dot_product(&self, other: &Self) -> Result<Polynomial<P>, KyberError> {
         if self.vec.len() != other.vec.len() {
-            return Err(QryptoError::ParameterError(format!(
+            return Err(KyberError::ParameterError(format!(
                 "Invalid vector length: expected {}, got {}",
                 self.vec.len(),
                 other.vec.len()
