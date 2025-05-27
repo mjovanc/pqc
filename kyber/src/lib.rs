@@ -37,42 +37,25 @@ pub mod params;
 use error::KyberError;
 use params::KyberParams;
 
-/// A Kyber public key used for encapsulation.
-///
-/// Validated against the expected size (`PK_SIZE`) from a `KyberParams` implementation.
-/// Safe to clone and debug, and its memory is securely zeroed on drop.
 #[derive(Clone, Debug, Zeroize, ZeroizeOnDrop)]
 pub struct PublicKey {
     bytes: Vec<u8>,
 }
 
-/// A Kyber secret key used for decapsulation.
-///
-/// Must be securely stored and never cloned. Implements zeroization on drop to protect memory.
 #[derive(Debug, Zeroize, ZeroizeOnDrop)]
 pub struct SecretKey {
     bytes: Vec<u8>,
 }
 
-/// A Kyber ciphertext used to carry a shared secret.
-///
-/// Created during encapsulation and required for decapsulation.
 #[derive(Clone, Debug)]
 pub struct Ciphertext {
     bytes: Vec<u8>,
 }
 
-/// A 32-byte shared secret derived from encapsulation or decapsulation.
-///
-/// The inner array is public but should be handled securely. Zeroed on drop.
 #[derive(Clone, Debug, Zeroize)]
 pub struct SharedSecret(pub [u8; 32]);
 
 impl PublicKey {
-    /// Create a new public key from raw bytes.
-    ///
-    /// # Errors
-    /// Returns `KeyLengthError` if `bytes.len()` does not match `P::PK_SIZE`.
     pub fn new<P: KyberParams>(bytes: Vec<u8>) -> Result<Self, KyberError> {
         if bytes.len() != P::PK_SIZE {
             return Err(KyberError::KeyLengthError {
@@ -85,10 +68,6 @@ impl PublicKey {
 }
 
 impl SecretKey {
-    /// Create a new secret key from raw bytes.
-    ///
-    /// # Errors
-    /// Returns `KeyLengthError` if `bytes.len()` does not match `P::SK_SIZE`.
     pub fn new<P: KyberParams>(bytes: Vec<u8>) -> Result<Self, KyberError> {
         if bytes.len() != P::SK_SIZE {
             return Err(KyberError::KeyLengthError {
@@ -101,10 +80,6 @@ impl SecretKey {
 }
 
 impl Ciphertext {
-    /// Create a new ciphertext from raw bytes.
-    ///
-    /// # Errors
-    /// Returns `CiphertextLengthError` if `bytes.len()` does not match `P::CT_SIZE`.
     pub fn new<P: KyberParams>(bytes: Vec<u8>) -> Result<Self, KyberError> {
         if bytes.len() != P::CT_SIZE {
             return Err(KyberError::CiphertextLengthError {
@@ -116,44 +91,25 @@ impl Ciphertext {
     }
 }
 
-/// Main Kyber API interface for a specific security level.
-///
-/// Constructed via `Kyber::<Kyber512>::new()` or other parameter sets.
-/// Provides methods for keypair generation, encapsulation, and decapsulation.
 pub struct Kyber<P: KyberParams> {
     _phantom: std::marker::PhantomData<P>,
 }
 
 impl<P: KyberParams> Kyber<P> {
-    /// Create a new instance of the Kyber KEM using parameters `P`.
     pub fn new() -> Self {
         Kyber {
             _phantom: std::marker::PhantomData,
         }
     }
 
-    /// Generate a public/secret keypair.
-    ///
-    /// # Errors
-    /// Returns `KyberError::KeygenError` if entropy or math operations fail.
     pub fn generate_keypair(&self) -> Result<(PublicKey, SecretKey), KyberError> {
         algorithm::generate_keypair::<P>()
     }
 
-    /// Encapsulate a shared secret to the given public key.
-    ///
-    /// Returns a ciphertext and the shared secret.
-    ///
-    /// # Errors
-    /// Returns `KyberError::EncapsulationError` if encryption fails.
     pub fn encapsulate(&self, pk: &PublicKey) -> Result<(Ciphertext, SharedSecret), KyberError> {
         algorithm::encapsulate::<P>(pk)
     }
 
-    /// Decapsulate a shared secret from the given ciphertext and secret key.
-    ///
-    /// # Errors
-    /// Returns `KyberError::DecapsulationError` if the ciphertext is malformed or authentication fails.
     pub fn decapsulate(&self, sk: &SecretKey, ct: &Ciphertext) -> Result<SharedSecret, KyberError> {
         algorithm::decapsulate::<P>(sk, ct)
     }
