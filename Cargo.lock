@@ -305,6 +305,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "kyber-ru"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "criterion",
+ "rand",
+ "serde",
+ "sha3",
+ "thiserror",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.172"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -387,17 +398,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "qrypto"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "rand",
- "serde",
- "sha3",
- "thiserror",
 ]
 
 [[package]]

@@ -1,6 +1,6 @@
 [package]
-name = "qrypto"
-version = "0.1.0"
+name = "kyber-ru"
+version = "0.1.0-alpha.1"
 edition = "2021"
 authors = ["Marcus Cvjeticanin <mjovanc@icloud.com>"]
 description = "The post-quantum cryptographic library in Rust."
@@ -23,8 +23,3 @@ serde = "1.0.219"
 
 [dev-dependencies]
 criterion = "0.5"
-
-# [[bench]]
-# name = "kyber"
-# harness = false
-# path = "benches/algorithms/kyber.rs"
