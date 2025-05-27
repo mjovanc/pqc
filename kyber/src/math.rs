@@ -6,8 +6,7 @@ use sha3::{
 use crate::{
     encoding_err,
     error::{EncodingErrorKind, ParameterErrorKind, QryptoError},
-    kem::PolynomialParams,
-    param_err,
+    param_err, PolynomialParams,
 };
 
 pub struct Polynomial<P: PolynomialParams> {

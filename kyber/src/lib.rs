@@ -1,6 +1,11 @@
-pub mod kyber;
+use error::QryptoError;
+use traits::KEM;
 
-pub use kyber::Kyber512;
+pub mod algorithm;
+mod crypto;
+pub mod error;
+mod math;
+pub mod traits;
 
 pub trait PolynomialParams {
     const N: usize; // Polynomial degree
@@ -64,4 +69,16 @@ impl KyberParams for Kyber1024Params {
     const PK_SIZE: usize = 1568;
     const SK_SIZE: usize = 3168;
     const CT_SIZE: usize = 1568;
+}
+
+pub fn generate_keypair<A: KEM>() -> Result<A::KeyPair, QryptoError> {
+    A::generate_keypair()
+}
+
+pub fn encapsulate<A: KEM>(pk: &A::PublicKey) -> Result<(Vec<u8>, Vec<u8>), QryptoError> {
+    A::encapsulate(pk)
+}
+
+pub fn decapsulate<A: KEM>(sk: &A::SecretKey, ciphertext: &[u8]) -> Result<Vec<u8>, QryptoError> {
+    A::decapsulate(sk, ciphertext)
 }

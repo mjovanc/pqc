@@ -2,10 +2,10 @@ use crate::{
     crypto::{hash::hash_xof, rand::generate_random_bytes},
     encoding_err,
     error::{EncodingErrorKind, ParameterErrorKind, QryptoError},
-    kem::{Kyber512Params, KyberParams},
     math::{generate_matrix, sample_cbd, PolyVec, Polynomial},
     param_err,
     traits::{KeyPair, KEM},
+    Kyber512Params, KyberParams,
 };
 use sha3::digest::{ExtendableOutput, Update};
 use sha3::{Digest as Sha3Digest, Sha3_256, Sha3_512, Shake128, Shake256};
@@ -292,7 +292,7 @@ pub type Kyber1024 = Kyber<Kyber1024Params>;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{encapsulate, generate_keypair};
+    use crate::{encapsulate, generate_keypair, Kyber512Params};
 
     #[test]
     fn kyber512_generate_keypair() {
