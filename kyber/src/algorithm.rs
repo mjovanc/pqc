@@ -1,6 +1,7 @@
 use crate::math::sample_cbd;
 use crate::math::{generate_matrix, PolyVec, Polynomial};
 use crate::{error::KyberError, params::KyberParams};
+use log::{debug, error};
 use rand::rngs::OsRng;
 use rand::TryRngCore;
 use sha3::digest::{ExtendableOutput, Update};
@@ -10,6 +11,8 @@ use std::ops::Sub;
 
 pub fn generate_keypair<P: KyberParams>() -> Result<(super::PublicKey, super::SecretKey), KyberError>
 {
+    #[cfg(debug_assertions)]
+    debug!("Generating keypair for {}", std::any::type_name::<P>());
     let seed = generate_random_bytes(32)?;
     let a = generate_matrix::<P>(&seed, P::K, P::K);
 
@@ -31,6 +34,11 @@ pub fn encapsulate<P: KyberParams>(
     pk: &super::PublicKey,
 ) -> Result<(super::Ciphertext, super::SharedSecret), KyberError> {
     if pk.bytes.len() != P::PK_SIZE {
+        error!(
+            "Encapsulation failed: invalid public key length, expected {}, got {}",
+            P::PK_SIZE,
+            pk.bytes.len()
+        );
         return Err(KyberError::KeyLengthError {
             expected: P::PK_SIZE,
             actual: pk.bytes.len(),
@@ -77,6 +85,7 @@ pub fn encapsulate<P: KyberParams>(
     let u_bytes_expected = (P::K * P::N * P::DU as usize) / 8;
     let v_bytes_expected = (P::N * P::DV as usize) / 8;
     if u_bytes.len() != u_bytes_expected || v_bytes.len() != v_bytes_expected {
+        error!("Serialization error: invalid compressed bytes length");
         return Err(KyberError::SerializationError(
             "Invalid compressed bytes length".to_string(),
         ));
@@ -99,12 +108,22 @@ pub fn decapsulate<P: KyberParams>(
     ct: &super::Ciphertext,
 ) -> Result<super::SharedSecret, KyberError> {
     if sk.bytes.len() != P::SK_SIZE {
+        error!(
+            "Decapsulation failed: invalid secret key length, expected {}, got {}",
+            P::SK_SIZE,
+            sk.bytes.len()
+        );
         return Err(KyberError::KeyLengthError {
             expected: P::SK_SIZE,
             actual: sk.bytes.len(),
         });
     }
     if ct.bytes.len() != P::CT_SIZE {
+        error!(
+            "Decapsulation failed: invalid ciphertext length, expected {}, got {}",
+            P::CT_SIZE,
+            ct.bytes.len()
+        );
         return Err(KyberError::CiphertextLengthError {
             expected: P::CT_SIZE,
             actual: ct.bytes.len(),
@@ -205,6 +224,11 @@ fn serialize_public_key<P: KyberParams>(
             "Overflow in public key size calculation".to_string(),
         ))?;
     if t_bytes.len() != t_bytes_expected {
+        error!(
+            "Public key serialization failed: expected {} bytes, got {}",
+            t_bytes_expected,
+            t_bytes.len()
+        );
         return Err(KyberError::SerializationError(
             "Invalid public key bytes length".to_string(),
         ));
@@ -213,6 +237,7 @@ fn serialize_public_key<P: KyberParams>(
     let mut pk = vec![0u8; P::PK_SIZE];
     let seed_slice_size = P::PK_SIZE - t_bytes_expected;
     if seed_slice_size != 32 {
+        error!("Public key serialization failed: invalid seed slice size");
         return Err(KyberError::SerializationError(
             "Invalid seed slice size".to_string(),
         ));
@@ -231,6 +256,11 @@ fn serialize_secret_key<P: KyberParams>(
     let s_bytes = s_compressed.to_compressed_bytes(d_s);
     let s_bytes_expected = (P::K * P::N * 12) / 8;
     if s_bytes.len() != s_bytes_expected {
+        error!(
+            "Secret key serialization failed: expected {} bytes, got {}",
+            s_bytes_expected,
+            s_bytes.len()
+        );
         return Err(KyberError::SerializationError(
             "Invalid secret key bytes length".to_string(),
         ));
@@ -253,6 +283,11 @@ fn serialize_secret_key<P: KyberParams>(
 fn parse_public_key<P: KyberParams>(pk: &[u8]) -> Result<(&[u8], Vec<u8>), KyberError> {
     let t_bytes_expected = (P::K * P::N * 12) / 8; // d_t = 12
     if pk.len() < t_bytes_expected + 32 {
+        error!(
+            "Public key parsing failed: too short, expected at least {} bytes, got {}",
+            t_bytes_expected + 32,
+            pk.len()
+        );
         return Err(KyberError::DeserializationError(
             "Public key too short".to_string(),
         ));
@@ -268,6 +303,11 @@ fn parse_secret_key<P: KyberParams>(sk: &[u8]) -> Result<(&[u8], &[u8], &[u8], &
     let sk_hash_offset = sk_t_offset + 32;
     let sk_z_offset = sk_hash_offset + 32;
     if sk.len() < sk_z_offset + P::PK_SIZE {
+        error!(
+            "Secret key parsing failed: too short, expected at least {} bytes, got {}",
+            sk_z_offset + P::PK_SIZE,
+            sk.len()
+        );
         return Err(KyberError::DeserializationError(
             "Secret key too short".to_string(),
         ));
@@ -284,6 +324,11 @@ fn parse_ciphertext<P: KyberParams>(ciphertext: &[u8]) -> Result<(&[u8], &[u8]),
     let u_bytes_expected = (P::K * P::N * P::DU as usize) / 8;
     let v_bytes_expected = (P::N * P::DV as usize) / 8;
     if ciphertext.len() < u_bytes_expected + v_bytes_expected {
+        error!(
+            "Ciphertext parsing failed: too short, expected at least {} bytes, got {}",
+            u_bytes_expected + v_bytes_expected,
+            ciphertext.len()
+        );
         return Err(KyberError::DeserializationError(
             "Ciphertext too short".to_string(),
         ));
@@ -315,21 +360,35 @@ pub fn hash_xof(seed: &[u8], output_len: usize) -> Vec<u8> {
 
 pub fn generate_random_bytes(len: usize) -> Result<Vec<u8>, KyberError> {
     let mut bytes = vec![0u8; len];
-    OsRng
-        .try_fill_bytes(&mut bytes)
-        .map_err(|e| KyberError::RandomError(format!("Failed to generate random bytes: {}", e)))?;
+    OsRng.try_fill_bytes(&mut bytes).map_err(|e| {
+        error!("Random bytes generation failed: {}", e);
+        KyberError::RandomError(format!("Failed to generate random bytes: {}", e))
+    })?;
     Ok(bytes)
 }
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Once;
+
     use super::*;
     use crate::{
         params::{Kyber1024, Kyber512, Kyber768},
         Kyber,
     };
 
+    static INIT_LOGGER: Once = Once::new();
+
+    fn init_logging() {
+        INIT_LOGGER.call_once(|| {
+            env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("trace"))
+                .format_timestamp_secs()
+                .init();
+        });
+    }
+
     fn generate_keypair<P: KyberParams>() {
+        init_logging();
         let kyber = Kyber::<P>::new();
         let (pk, sk) = kyber.generate_keypair().expect("Keypair generation failed");
 
@@ -353,6 +412,7 @@ mod tests {
     }
 
     fn encapsulate<P: KyberParams>() {
+        init_logging();
         let kyber = Kyber::<P>::new();
         let (pk, _) = kyber.generate_keypair().expect("Keypair generation failed");
         let (ct, ss) = kyber.encapsulate(&pk).expect("Encapsulation failed");
@@ -376,6 +436,7 @@ mod tests {
     }
 
     fn decapsulate<P: KyberParams>() {
+        init_logging();
         let kyber = Kyber::<P>::new();
         let (pk, sk) = kyber.generate_keypair().expect("Keypair generation failed");
         let (ct, ss1) = kyber.encapsulate(&pk).expect("Encapsulation failed");
