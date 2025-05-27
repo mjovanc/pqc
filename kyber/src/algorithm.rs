@@ -1,7 +1,7 @@
 use crate::math::sample_cbd;
 use crate::math::{generate_matrix, PolyVec, Polynomial};
 use crate::{error::KyberError, params::KyberParams};
-use log::{debug, error};
+use log::{debug, error, info};
 use rand::rngs::OsRng;
 use rand::TryRngCore;
 use sha3::digest::{ExtendableOutput, Update};
@@ -11,6 +11,14 @@ use std::ops::Sub;
 
 pub fn generate_keypair<P: KyberParams>() -> Result<(super::PublicKey, super::SecretKey), KyberError>
 {
+    debug!(
+        "GENERATE KEYPAIR Parameters: K={}, ETA1={}, ETA2={}, DU={}, DV={}",
+        P::K,
+        P::ETA1,
+        P::ETA2,
+        P::DU,
+        P::DV
+    );
     #[cfg(debug_assertions)]
     debug!("Generating keypair for {}", std::any::type_name::<P>());
     let seed = generate_random_bytes(32)?;
@@ -33,6 +41,14 @@ pub fn generate_keypair<P: KyberParams>() -> Result<(super::PublicKey, super::Se
 pub fn encapsulate<P: KyberParams>(
     pk: &super::PublicKey,
 ) -> Result<(super::Ciphertext, super::SharedSecret), KyberError> {
+    debug!(
+        "ENCAPSULATE Parameters: K={}, ETA1={}, ETA2={}, DU={}, DV={}",
+        P::K,
+        P::ETA1,
+        P::ETA2,
+        P::DU,
+        P::DV
+    );
     if pk.bytes.len() != P::PK_SIZE {
         error!(
             "Encapsulation failed: invalid public key length, expected {}, got {}",
@@ -46,6 +62,7 @@ pub fn encapsulate<P: KyberParams>(
     }
 
     let m = generate_random_bytes(32)?;
+    debug!("Encapsulate m: {:?}", m);
     let m_bar = Sha3_256::digest(&m);
     let pk_hash = Sha3_256::digest(&pk.bytes);
     let mut g_input = Vec::with_capacity(32 + 32);
@@ -107,6 +124,14 @@ pub fn decapsulate<P: KyberParams>(
     sk: &super::SecretKey,
     ct: &super::Ciphertext,
 ) -> Result<super::SharedSecret, KyberError> {
+    debug!(
+        "DECAPSULATE Parameters: K={}, ETA1={}, ETA2={}, DU={}, DV={}",
+        P::K,
+        P::ETA1,
+        P::ETA2,
+        P::DU,
+        P::DV
+    );
     if sk.bytes.len() != P::SK_SIZE {
         error!(
             "Decapsulation failed: invalid secret key length, expected {}, got {}",
@@ -130,6 +155,10 @@ pub fn decapsulate<P: KyberParams>(
         });
     }
 
+    info!(
+        "Performing decapsulation for {}",
+        std::any::type_name::<P>()
+    );
     let (s_compressed_bytes, pk_hash, z, pk) = parse_secret_key::<P>(&sk.bytes)?;
     let computed_pk_hash = Sha3_256::digest(pk);
     if computed_pk_hash.as_slice() != pk_hash {
@@ -143,10 +172,21 @@ pub fn decapsulate<P: KyberParams>(
     let u = PolyVec::<P>::decompress(u_compressed_bytes, P::DU)?;
     let v = Polynomial::<P>::decompress(v_compressed_bytes, P::DV)?;
 
+    #[cfg(debug_assertions)]
+    debug!(
+        "Decompressed u (len: {}), v (len: {}), s (len: {})",
+        u.get_vec().len(),
+        v.len(),
+        s.get_vec().len()
+    );
+
     let s_u = s.dot_product(&u)?;
-    let neg_s_u = Polynomial::<P>::new().sub(&s_u);
+    let neg_s_u = s_u.neg();
     let m_prime = v.add(&neg_s_u);
     let m_bytes = m_prime.to_compressed_bytes(1);
+    debug!("Decapsulate m_bytes: {:?}", m_bytes);
+    #[cfg(debug_assertions)]
+    debug!("Computed m_prime, compressed to {} bytes", m_bytes.len());
 
     let m_bar = Sha3_256::digest(&m_bytes);
     let mut g_input = Vec::with_capacity(32 + 32);
@@ -166,6 +206,8 @@ pub fn decapsulate<P: KyberParams>(
         shake.finalize_xof_into(&mut noise);
         r_vec.get_vec_mut()[i] = sample_cbd::<P>(P::ETA1, &noise);
     }
+    debug!("Encapsulate r_seed: {:?}", r_seed);
+
     let e1 = sample_polyvec_cbd::<P>(P::ETA2, P::K)?;
     let e2_noise = generate_random_bytes((P::ETA2 as usize * P::N).div_ceil(4))?;
     let e2 = sample_cbd::<P>(P::ETA2, &e2_noise);
@@ -178,17 +220,30 @@ pub fn decapsulate<P: KyberParams>(
     let v_compressed_prime = v_prime.compress(P::DV);
     let u_bytes_prime = u_compressed_prime.to_compressed_bytes(P::DU);
     let v_bytes_prime = v_compressed_prime.to_compressed_bytes(P::DV);
+    #[cfg(debug_assertions)]
+    debug!(
+        "Computed u_bytes_prime (len: {}), v_bytes_prime (len: {})",
+        u_bytes_prime.len(),
+        v_bytes_prime.len()
+    );
     let mut ciphertext_prime = vec![0u8; u_bytes_prime.len() + v_bytes_prime.len()];
     ciphertext_prime[0..u_bytes_prime.len()].copy_from_slice(&u_bytes_prime);
     ciphertext_prime[u_bytes_prime.len()..].copy_from_slice(&v_bytes_prime);
 
     let c_hash = Sha3_256::digest(&ct.bytes);
     let k_bar_or_z = if ct.bytes == ciphertext_prime {
+        #[cfg(debug_assertions)]
+        debug!("Ciphertext match, using k_bar");
         k_bar
     } else {
+        #[cfg(debug_assertions)]
+        debug!("Ciphertext mismatch, using z");
         z
     };
     let shared_secret = compute_shared_secret(k_bar_or_z, &c_hash)?;
+
+    debug!("Original ciphertext: {:?}", ct.bytes);
+    debug!("Recomputed ciphertext: {:?}", ciphertext_prime);
 
     Ok(super::SharedSecret(shared_secret))
 }

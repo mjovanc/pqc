@@ -35,6 +35,14 @@ impl<P: PolynomialParams> Polynomial<P> {
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.coeffs.len()
+    }
+
+    pub fn get_coeff(&self, index: usize) -> i16 {
+        self.coeffs[index]
+    }
+
     pub fn add(&self, other: &Self) -> Self {
         let mut result = Polynomial::new();
         for i in 0..P::N {
@@ -42,6 +50,14 @@ impl<P: PolynomialParams> Polynomial<P> {
             if result.coeffs[i] < 0 {
                 result.coeffs[i] += P::Q as i16;
             }
+        }
+        result
+    }
+
+    pub fn neg(&self) -> Self {
+        let mut result = Polynomial::new();
+        for i in 0..P::N {
+            result.coeffs[i] = (P::Q as i16 - self.coeffs[i]) % P::Q as i16;
         }
         result
     }

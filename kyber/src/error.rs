@@ -18,4 +18,6 @@ pub enum KyberError {
     RngError(#[from] std::io::Error),
     #[error("Random number generation failed: {0}")]
     RandomError(String),
+    #[error("Invalid input: {0}")]
+    InputError(String),
 }
