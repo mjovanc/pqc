@@ -29,7 +29,7 @@ pub struct SharedSecret(pub [u8; 32]);
 impl PublicKey {
     pub fn new<P: KyberParams>(bytes: Vec<u8>) -> Result<Self, KyberError> {
         if bytes.len() != P::PK_SIZE {
-            return Err(KyberError::InvalidKeyLength {
+            return Err(KyberError::KeyLengthError {
                 expected: P::PK_SIZE,
                 actual: bytes.len(),
             });
@@ -41,7 +41,7 @@ impl PublicKey {
 impl SecretKey {
     pub fn new<P: KyberParams>(bytes: Vec<u8>) -> Result<Self, KyberError> {
         if bytes.len() != P::SK_SIZE {
-            return Err(KyberError::InvalidKeyLength {
+            return Err(KyberError::KeyLengthError {
                 expected: P::SK_SIZE,
                 actual: bytes.len(),
             });
@@ -53,7 +53,7 @@ impl SecretKey {
 impl Ciphertext {
     pub fn new<P: KyberParams>(bytes: Vec<u8>) -> Result<Self, KyberError> {
         if bytes.len() != P::CT_SIZE {
-            return Err(KyberError::InvalidCiphertextLength {
+            return Err(KyberError::CiphertextLengthError {
                 expected: P::CT_SIZE,
                 actual: bytes.len(),
             });

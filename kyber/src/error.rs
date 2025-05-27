@@ -3,15 +3,15 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum KyberError {
     #[error("Invalid key length: expected {expected}, got {actual}")]
-    InvalidKeyLength { expected: usize, actual: usize },
+    KeyLengthError { expected: usize, actual: usize },
     #[error("Invalid ciphertext length: expected {expected}, got {actual}")]
-    InvalidCiphertextLength { expected: usize, actual: usize },
+    CiphertextLengthError { expected: usize, actual: usize },
     #[error("Serialization failed: {0}")]
-    SerializationFailed(String),
+    SerializationError(String),
     #[error("Deserialization failed: {0}")]
-    DeserializationFailed(String),
+    DeserializationError(String),
     #[error("Hash mismatch")]
-    HashMismatch,
+    HashMismatchError,
     #[error("Parameter error: {0}")]
     ParameterError(String),
     #[error("RNG failure: {0}")]

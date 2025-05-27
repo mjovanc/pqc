@@ -83,7 +83,7 @@ impl<P: PolynomialParams> Polynomial<P> {
         let bits_per_coeff = d as usize;
         let bytes_needed = (P::N * bits_per_coeff).div_ceil(8);
         if bytes.len() < bytes_needed {
-            return Err(KyberError::DeserializationFailed(format!(
+            return Err(KyberError::DeserializationError(format!(
                 "Expected at least {} bytes, got {}",
                 bytes_needed,
                 bytes.len()
@@ -99,7 +99,7 @@ impl<P: PolynomialParams> Polynomial<P> {
 
             while bits_read < bits_to_read {
                 if byte_idx >= bytes.len() {
-                    return Err(KyberError::DeserializationFailed(
+                    return Err(KyberError::DeserializationError(
                         "Insufficient bytes for decompression".to_string(),
                     ));
                 }
@@ -120,7 +120,7 @@ impl<P: PolynomialParams> Polynomial<P> {
             let scaled = y.wrapping_mul(q) + (1u64 << (d - 1));
             let decompressed = scaled >> d;
             if decompressed >= q {
-                return Err(KyberError::DeserializationFailed(
+                return Err(KyberError::DeserializationError(
                     "Decompressed coefficient too large".to_string(),
                 ));
             }
@@ -234,7 +234,7 @@ impl<P: PolynomialParams> PolyVec<P> {
     pub fn decompress(bytes: &[u8], d: u32) -> Result<Self, KyberError> {
         let bytes_per_poly = (P::N * d as usize).div_ceil(8);
         if bytes.len() % bytes_per_poly != 0 {
-            return Err(KyberError::DeserializationFailed(
+            return Err(KyberError::DeserializationError(
                 "Invalid byte length for polyvec".to_string(),
             ));
         }

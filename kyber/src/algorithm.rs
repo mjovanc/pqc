@@ -31,7 +31,7 @@ pub fn encapsulate<P: KyberParams>(
     pk: &super::PublicKey,
 ) -> Result<(super::Ciphertext, super::SharedSecret), KyberError> {
     if pk.bytes.len() != P::PK_SIZE {
-        return Err(KyberError::InvalidKeyLength {
+        return Err(KyberError::KeyLengthError {
             expected: P::PK_SIZE,
             actual: pk.bytes.len(),
         });
@@ -77,7 +77,7 @@ pub fn encapsulate<P: KyberParams>(
     let u_bytes_expected = (P::K * P::N * P::DU as usize) / 8;
     let v_bytes_expected = (P::N * P::DV as usize) / 8;
     if u_bytes.len() != u_bytes_expected || v_bytes.len() != v_bytes_expected {
-        return Err(KyberError::SerializationFailed(
+        return Err(KyberError::SerializationError(
             "Invalid compressed bytes length".to_string(),
         ));
     }
@@ -99,13 +99,13 @@ pub fn decapsulate<P: KyberParams>(
     ct: &super::Ciphertext,
 ) -> Result<super::SharedSecret, KyberError> {
     if sk.bytes.len() != P::SK_SIZE {
-        return Err(KyberError::InvalidKeyLength {
+        return Err(KyberError::KeyLengthError {
             expected: P::SK_SIZE,
             actual: sk.bytes.len(),
         });
     }
     if ct.bytes.len() != P::CT_SIZE {
-        return Err(KyberError::InvalidCiphertextLength {
+        return Err(KyberError::CiphertextLengthError {
             expected: P::CT_SIZE,
             actual: ct.bytes.len(),
         });
@@ -114,7 +114,7 @@ pub fn decapsulate<P: KyberParams>(
     let (s_compressed_bytes, pk_hash, z, pk) = parse_secret_key::<P>(&sk.bytes)?;
     let computed_pk_hash = Sha3_256::digest(pk);
     if computed_pk_hash.as_slice() != pk_hash {
-        return Err(KyberError::HashMismatch);
+        return Err(KyberError::HashMismatchError);
     }
 
     let (t_compressed_bytes, rho) = parse_public_key::<P>(pk)?;
@@ -201,11 +201,11 @@ fn serialize_public_key<P: KyberParams>(
         .checked_mul(P::N)
         .and_then(|x| x.checked_mul(d_t as usize))
         .map(|x| x / 8)
-        .ok_or(KyberError::SerializationFailed(
+        .ok_or(KyberError::SerializationError(
             "Overflow in public key size calculation".to_string(),
         ))?;
     if t_bytes.len() != t_bytes_expected {
-        return Err(KyberError::SerializationFailed(
+        return Err(KyberError::SerializationError(
             "Invalid public key bytes length".to_string(),
         ));
     }
@@ -213,7 +213,7 @@ fn serialize_public_key<P: KyberParams>(
     let mut pk = vec![0u8; P::PK_SIZE];
     let seed_slice_size = P::PK_SIZE - t_bytes_expected;
     if seed_slice_size != 32 {
-        return Err(KyberError::SerializationFailed(
+        return Err(KyberError::SerializationError(
             "Invalid seed slice size".to_string(),
         ));
     }
@@ -231,7 +231,7 @@ fn serialize_secret_key<P: KyberParams>(
     let s_bytes = s_compressed.to_compressed_bytes(d_s);
     let s_bytes_expected = (P::K * P::N * 12) / 8;
     if s_bytes.len() != s_bytes_expected {
-        return Err(KyberError::SerializationFailed(
+        return Err(KyberError::SerializationError(
             "Invalid secret key bytes length".to_string(),
         ));
     }
@@ -253,7 +253,7 @@ fn serialize_secret_key<P: KyberParams>(
 fn parse_public_key<P: KyberParams>(pk: &[u8]) -> Result<(&[u8], Vec<u8>), KyberError> {
     let t_bytes_expected = (P::K * P::N * 12) / 8; // d_t = 12
     if pk.len() < t_bytes_expected + 32 {
-        return Err(KyberError::DeserializationFailed(
+        return Err(KyberError::DeserializationError(
             "Public key too short".to_string(),
         ));
     }
@@ -268,7 +268,7 @@ fn parse_secret_key<P: KyberParams>(sk: &[u8]) -> Result<(&[u8], &[u8], &[u8], &
     let sk_hash_offset = sk_t_offset + 32;
     let sk_z_offset = sk_hash_offset + 32;
     if sk.len() < sk_z_offset + P::PK_SIZE {
-        return Err(KyberError::DeserializationFailed(
+        return Err(KyberError::DeserializationError(
             "Secret key too short".to_string(),
         ));
     }
@@ -284,7 +284,7 @@ fn parse_ciphertext<P: KyberParams>(ciphertext: &[u8]) -> Result<(&[u8], &[u8]),
     let u_bytes_expected = (P::K * P::N * P::DU as usize) / 8;
     let v_bytes_expected = (P::N * P::DV as usize) / 8;
     if ciphertext.len() < u_bytes_expected + v_bytes_expected {
-        return Err(KyberError::DeserializationFailed(
+        return Err(KyberError::DeserializationError(
             "Ciphertext too short".to_string(),
         ));
     }
