@@ -33,10 +33,10 @@ The Git version pulls the most recent updates from the master branch at [https:/
 
 ### Basic Example
 
-Here’s a quick example of using `kyber-ru` crate for shared secret encapsulation and decapsulation:
+Here’s a quick example of using `kyber_rs` crate for shared secret encapsulation and decapsulation:
 
 ```rust
-use kyber_ru::{algorithms::Kyber512, decapsulate, encapsulate, generate_keypair, QryptoError};
+use kyber_rs::{algorithms::Kyber512, decapsulate, encapsulate, generate_keypair, QryptoError};
 
 fn main() -> Result<(), QryptoError> {
     // Generate a Kyber512 keypair

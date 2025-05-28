@@ -403,7 +403,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kyber-ru"
+name = "kyber_rs"
 version = "0.1.0-alpha.1"
 dependencies = [
  "criterion",
