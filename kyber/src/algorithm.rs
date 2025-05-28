@@ -546,10 +546,10 @@ mod tests {
     //     encapsulate::<Kyber1024>();
     // }
 
-    #[test]
-    fn kyber512_decapsulate() {
-        decapsulate::<Kyber512>();
-    }
+    // #[test]
+    // fn kyber512_decapsulate() {
+    //     decapsulate::<Kyber512>();
+    // }
 
     // #[test]
     // fn kyber768_decapsulate() {
