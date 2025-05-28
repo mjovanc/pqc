@@ -6,27 +6,6 @@
 //!
 //! The API provides key generation, encapsulation, and decapsulation, with strong typing for
 //! public/secret keys and ciphertexts.
-//!
-//! ## Example
-//! ```rust
-//! use kyber::{Kyber, KyberError};
-//! use kyber::params::Kyber512;
-//!
-//! fn main() -> Result<(), KyberError> {
-//!     let kyber = Kyber::<Kyber512>::new();
-//!     let (pk, sk) = kyber.generate_keypair()?;
-//!     let (ct, ss1) = kyber.encapsulate(&pk)?;
-//!     let ss2 = kyber.decapsulate(&sk, &ct)?;
-//!
-//!     assert_eq!(ss1.0, ss2.0);
-//!     Ok(())
-//! }
-//! ```
-//!
-//! ## Errors
-//! All cryptographic operations return `KyberError` variants:
-//! - `KeyLengthError`: If a key or ciphertext vector is not the correct size.
-//! - `EncapsulationError` / `DecapsulationError`: Failures in cryptographic steps.
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 pub mod algorithm;
