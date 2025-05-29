@@ -1,16 +1,16 @@
 [package]
-name = "kyber_rs"
+name = "mlkem_rs"
 version = "0.1.0-alpha.1"
 edition = "2021"
 authors = ["Marcus Cvjeticanin <mjovanc@icloud.com>"]
 description = "The post-quantum cryptographic library in Rust."
 license = "MIT"
-documentation = "https://docs.rs/kyber-ru/latest/kyber-ru/"
+documentation = "https://docs.rs/mlkem_rs/latest/mlkem_rs/"
 repository = "https://github.com/mjovanc/pqc"
 readme = "../README.md"
 rust-version = "1.86.0"
 homepage = "https://github.com/mjovanc/pqc"
-keywords = ["kyber", "post-quantum", "pqc", "cryptography", "quantum-safe"]
+keywords = ["mlkem", "post-quantum", "pqc", "cryptography", "quantum-safe"]
 
 [badges]
 maintenance = { status = "actively-developed" }

@@ -1,5 +1,5 @@
 [workspace]
-members = ["kyber"]
+members = ["ml-kem"]
 workspace.resolver = "1"
 
 [workspace.dependencies]

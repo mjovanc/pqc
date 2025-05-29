@@ -5,7 +5,7 @@ use sha3::{
 };
 use std::ops::Sub;
 
-use crate::{error::KyberError, params::PolynomialParams};
+use crate::{error::MlKemError, params::PolynomialParams};
 
 #[derive(Debug)]
 pub struct Polynomial<P: PolynomialParams> {
@@ -126,13 +126,13 @@ impl<P: PolynomialParams> Polynomial<P> {
         result
     }
 
-    pub fn decompress(bytes: &[u8], d: u32) -> Result<Self, KyberError> {
+    pub fn decompress(bytes: &[u8], d: u32) -> Result<Self, MlKemError> {
         let mut coeffs = vec![0i16; P::N];
         let q = P::Q as u64;
         let bits_per_coeff = d as usize;
         let bytes_needed = (P::N * bits_per_coeff).div_ceil(8);
         if bytes.len() < bytes_needed {
-            return Err(KyberError::DeserializationError(format!(
+            return Err(MlKemError::DeserializationError(format!(
                 "Expected at least {} bytes, got {}",
                 bytes_needed,
                 bytes.len()
@@ -148,7 +148,7 @@ impl<P: PolynomialParams> Polynomial<P> {
 
             while bits_read < bits_to_read {
                 if byte_idx >= bytes.len() {
-                    return Err(KyberError::DeserializationError(
+                    return Err(MlKemError::DeserializationError(
                         "Insufficient bytes for decompression".to_string(),
                     ));
                 }
@@ -178,7 +178,7 @@ impl<P: PolynomialParams> Polynomial<P> {
                 (y * q + (1u64 << (d - 1))) >> d
             };
             if decompressed >= q {
-                return Err(KyberError::DeserializationError(
+                return Err(MlKemError::DeserializationError(
                     "Decompressed coefficient too large".to_string(),
                 ));
             }
@@ -294,10 +294,10 @@ impl<P: PolynomialParams> PolyVec<P> {
         bytes
     }
 
-    pub fn decompress(bytes: &[u8], d: u32) -> Result<Self, KyberError> {
+    pub fn decompress(bytes: &[u8], d: u32) -> Result<Self, MlKemError> {
         let bytes_per_poly = (P::N * d as usize).div_ceil(8);
         if bytes.len() % bytes_per_poly != 0 {
-            return Err(KyberError::DeserializationError(
+            return Err(MlKemError::DeserializationError(
                 "Invalid byte length for polyvec".to_string(),
             ));
         }
@@ -312,9 +312,9 @@ impl<P: PolynomialParams> PolyVec<P> {
         Ok(PolyVec { vec })
     }
 
-    pub fn dot_product(&self, other: &Self) -> Result<Polynomial<P>, KyberError> {
+    pub fn dot_product(&self, other: &Self) -> Result<Polynomial<P>, MlKemError> {
         if self.vec.len() != other.vec.len() {
-            return Err(KyberError::ParameterError(format!(
+            return Err(MlKemError::ParameterError(format!(
                 "Invalid vector length: expected {}, got {}",
                 self.vec.len(),
                 other.vec.len()

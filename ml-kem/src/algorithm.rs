@@ -1,6 +1,6 @@
 use crate::math::sample_cbd;
 use crate::math::{generate_matrix, PolyVec, Polynomial};
-use crate::{error::KyberError, params::KyberParams};
+use crate::{error::MlKemError, params::MlKemParams};
 use log::{debug, error, info};
 use rand::rngs::OsRng;
 use rand::TryRngCore;
@@ -8,7 +8,7 @@ use sha3::digest::{ExtendableOutput, Update};
 use sha3::Digest;
 use sha3::{Sha3_256, Sha3_512, Shake128, Shake256};
 
-pub fn generate_keypair<P: KyberParams>() -> Result<(super::PublicKey, super::SecretKey), KyberError>
+pub fn generate_keypair<P: MlKemParams>() -> Result<(super::PublicKey, super::SecretKey), MlKemError>
 {
     debug!(
         "GENERATE KEYPAIR Parameters: K={}, ETA1={}, ETA2={}, DU={}, DV={}",
@@ -37,9 +37,9 @@ pub fn generate_keypair<P: KyberParams>() -> Result<(super::PublicKey, super::Se
     ))
 }
 
-pub fn encapsulate<P: KyberParams>(
+pub fn encapsulate<P: MlKemParams>(
     pk: &super::PublicKey,
-) -> Result<(super::Ciphertext, super::SharedSecret), KyberError> {
+) -> Result<(super::Ciphertext, super::SharedSecret), MlKemError> {
     debug!(
         "ENCAPSULATE Parameters: K={}, ETA1={}, ETA2={}, DU={}, DV={}",
         P::K,
@@ -54,7 +54,7 @@ pub fn encapsulate<P: KyberParams>(
             P::PK_SIZE,
             pk.bytes.len()
         );
-        return Err(KyberError::KeyLengthError {
+        return Err(MlKemError::KeyLengthError {
             expected: P::PK_SIZE,
             actual: pk.bytes.len(),
         });
@@ -104,7 +104,7 @@ pub fn encapsulate<P: KyberParams>(
     let v_bytes_expected = (P::N * P::DV as usize) / 8;
     if u_bytes.len() != u_bytes_expected || v_bytes.len() != v_bytes_expected {
         error!("Serialization error: invalid compressed bytes length");
-        return Err(KyberError::SerializationError(
+        return Err(MlKemError::SerializationError(
             "Invalid compressed bytes length".to_string(),
         ));
     }
@@ -121,10 +121,10 @@ pub fn encapsulate<P: KyberParams>(
     ))
 }
 
-pub fn decapsulate<P: KyberParams>(
+pub fn decapsulate<P: MlKemParams>(
     sk: &super::SecretKey,
     ct: &super::Ciphertext,
-) -> Result<super::SharedSecret, KyberError> {
+) -> Result<super::SharedSecret, MlKemError> {
     debug!(
         "DECAPSULATE Parameters: K={}, ETA1={}, ETA2={}, DU={}, DV={}",
         P::K,
@@ -139,7 +139,7 @@ pub fn decapsulate<P: KyberParams>(
             P::SK_SIZE,
             sk.bytes.len()
         );
-        return Err(KyberError::KeyLengthError {
+        return Err(MlKemError::KeyLengthError {
             expected: P::SK_SIZE,
             actual: sk.bytes.len(),
         });
@@ -150,7 +150,7 @@ pub fn decapsulate<P: KyberParams>(
             P::CT_SIZE,
             ct.bytes.len()
         );
-        return Err(KyberError::CiphertextLengthError {
+        return Err(MlKemError::CiphertextLengthError {
             expected: P::CT_SIZE,
             actual: ct.bytes.len(),
         });
@@ -163,7 +163,7 @@ pub fn decapsulate<P: KyberParams>(
     let (s_compressed_bytes, pk_hash, z, pk) = parse_secret_key::<P>(&sk.bytes)?;
     let computed_pk_hash = Sha3_256::digest(pk);
     if computed_pk_hash.as_slice() != pk_hash {
-        return Err(KyberError::HashMismatchError);
+        return Err(MlKemError::HashMismatchError);
     }
 
     let (t_compressed_bytes, rho) = parse_public_key::<P>(pk)?;
@@ -259,7 +259,7 @@ pub fn decapsulate<P: KyberParams>(
     Ok(super::SharedSecret(shared_secret))
 }
 
-fn sample_polyvec_cbd<P: KyberParams>(eta: u32, k: usize) -> Result<PolyVec<P>, KyberError> {
+fn sample_polyvec_cbd<P: MlKemParams>(eta: u32, k: usize) -> Result<PolyVec<P>, MlKemError> {
     let mut polyvec = PolyVec::<P>::new(k);
     for i in 0..k {
         let noise = generate_random_bytes((eta as usize * P::N).div_ceil(4))?;
@@ -268,7 +268,7 @@ fn sample_polyvec_cbd<P: KyberParams>(eta: u32, k: usize) -> Result<PolyVec<P>, 
     Ok(polyvec)
 }
 
-fn compress_polyvec<P: KyberParams>(polyvec: &PolyVec<P>, bits: u32) -> PolyVec<P> {
+fn compress_polyvec<P: MlKemParams>(polyvec: &PolyVec<P>, bits: u32) -> PolyVec<P> {
     let mut compressed = PolyVec::<P>::new(polyvec.get_vec().len());
     for i in 0..polyvec.get_vec().len() {
         compressed.get_vec_mut()[i] = polyvec.get_vec()[i].compress(bits);
@@ -276,17 +276,17 @@ fn compress_polyvec<P: KyberParams>(polyvec: &PolyVec<P>, bits: u32) -> PolyVec<
     compressed
 }
 
-fn serialize_public_key<P: KyberParams>(
+fn serialize_public_key<P: MlKemParams>(
     t_compressed: &PolyVec<P>,
     seed: &[u8],
     d_t: u32,
-) -> Result<Vec<u8>, KyberError> {
+) -> Result<Vec<u8>, MlKemError> {
     let t_bytes = t_compressed.to_compressed_bytes(d_t);
     let t_bytes_expected = P::K
         .checked_mul(P::N)
         .and_then(|x| x.checked_mul(d_t as usize))
         .map(|x| x / 8)
-        .ok_or(KyberError::SerializationError(
+        .ok_or(MlKemError::SerializationError(
             "Overflow in public key size calculation".to_string(),
         ))?;
     if t_bytes.len() != t_bytes_expected {
@@ -295,7 +295,7 @@ fn serialize_public_key<P: KyberParams>(
             t_bytes_expected,
             t_bytes.len()
         );
-        return Err(KyberError::SerializationError(
+        return Err(MlKemError::SerializationError(
             "Invalid public key bytes length".to_string(),
         ));
     }
@@ -304,7 +304,7 @@ fn serialize_public_key<P: KyberParams>(
     let seed_slice_size = P::PK_SIZE - t_bytes_expected;
     if seed_slice_size != 32 {
         error!("Public key serialization failed: invalid seed slice size");
-        return Err(KyberError::SerializationError(
+        return Err(MlKemError::SerializationError(
             "Invalid seed slice size".to_string(),
         ));
     }
@@ -313,11 +313,11 @@ fn serialize_public_key<P: KyberParams>(
     Ok(pk)
 }
 
-fn serialize_secret_key<P: KyberParams>(
+fn serialize_secret_key<P: MlKemParams>(
     s: &PolyVec<P>,
     pk: &[u8],
     d_s: u32,
-) -> Result<Vec<u8>, KyberError> {
+) -> Result<Vec<u8>, MlKemError> {
     let s_compressed = compress_polyvec::<P>(s, d_s);
     let s_bytes = s_compressed.to_compressed_bytes(d_s);
     let s_bytes_expected = (P::K * P::N * 12) / 8;
@@ -327,7 +327,7 @@ fn serialize_secret_key<P: KyberParams>(
             s_bytes_expected,
             s_bytes.len()
         );
-        return Err(KyberError::SerializationError(
+        return Err(MlKemError::SerializationError(
             "Invalid secret key bytes length".to_string(),
         ));
     }
@@ -346,7 +346,7 @@ fn serialize_secret_key<P: KyberParams>(
     Ok(sk)
 }
 
-fn parse_public_key<P: KyberParams>(pk: &[u8]) -> Result<(&[u8], Vec<u8>), KyberError> {
+fn parse_public_key<P: MlKemParams>(pk: &[u8]) -> Result<(&[u8], Vec<u8>), MlKemError> {
     let t_bytes_expected = (P::K * P::N * 12) / 8; // d_t = 12
     if pk.len() < t_bytes_expected + 32 {
         error!(
@@ -354,7 +354,7 @@ fn parse_public_key<P: KyberParams>(pk: &[u8]) -> Result<(&[u8], Vec<u8>), Kyber
             t_bytes_expected + 32,
             pk.len()
         );
-        return Err(KyberError::DeserializationError(
+        return Err(MlKemError::DeserializationError(
             "Public key too short".to_string(),
         ));
     }
@@ -363,7 +363,7 @@ fn parse_public_key<P: KyberParams>(pk: &[u8]) -> Result<(&[u8], Vec<u8>), Kyber
     Ok((t_compressed_bytes, rho))
 }
 
-fn parse_secret_key<P: KyberParams>(sk: &[u8]) -> Result<(&[u8], &[u8], &[u8], &[u8]), KyberError> {
+fn parse_secret_key<P: MlKemParams>(sk: &[u8]) -> Result<(&[u8], &[u8], &[u8], &[u8]), MlKemError> {
     let s_bytes_expected = (P::K * P::N * 12) / 8; // d_s = 12
     let sk_t_offset = s_bytes_expected;
     let sk_hash_offset = sk_t_offset + 32;
@@ -374,7 +374,7 @@ fn parse_secret_key<P: KyberParams>(sk: &[u8]) -> Result<(&[u8], &[u8], &[u8], &
             sk_z_offset + P::PK_SIZE,
             sk.len()
         );
-        return Err(KyberError::DeserializationError(
+        return Err(MlKemError::DeserializationError(
             "Secret key too short".to_string(),
         ));
     }
@@ -386,7 +386,7 @@ fn parse_secret_key<P: KyberParams>(sk: &[u8]) -> Result<(&[u8], &[u8], &[u8], &
     ))
 }
 
-fn parse_ciphertext<P: KyberParams>(ciphertext: &[u8]) -> Result<(&[u8], &[u8]), KyberError> {
+fn parse_ciphertext<P: MlKemParams>(ciphertext: &[u8]) -> Result<(&[u8], &[u8]), MlKemError> {
     let u_bytes_expected = (P::K * P::N * P::DU as usize) / 8;
     let v_bytes_expected = (P::N * P::DV as usize) / 8;
     if ciphertext.len() < u_bytes_expected + v_bytes_expected {
@@ -395,7 +395,7 @@ fn parse_ciphertext<P: KyberParams>(ciphertext: &[u8]) -> Result<(&[u8], &[u8]),
             u_bytes_expected + v_bytes_expected,
             ciphertext.len()
         );
-        return Err(KyberError::DeserializationError(
+        return Err(MlKemError::DeserializationError(
             "Ciphertext too short".to_string(),
         ));
     }
@@ -405,7 +405,7 @@ fn parse_ciphertext<P: KyberParams>(ciphertext: &[u8]) -> Result<(&[u8], &[u8]),
     ))
 }
 
-fn compute_shared_secret(k_bar_or_z: &[u8], c_hash: &[u8]) -> Result<[u8; 32], KyberError> {
+fn compute_shared_secret(k_bar_or_z: &[u8], c_hash: &[u8]) -> Result<[u8; 32], MlKemError> {
     let mut kdf_input = Vec::with_capacity(32 + 32);
     kdf_input.extend_from_slice(k_bar_or_z);
     kdf_input.extend_from_slice(c_hash);
@@ -424,11 +424,11 @@ pub fn hash_xof(seed: &[u8], output_len: usize) -> Vec<u8> {
     output
 }
 
-pub fn generate_random_bytes(len: usize) -> Result<Vec<u8>, KyberError> {
+pub fn generate_random_bytes(len: usize) -> Result<Vec<u8>, MlKemError> {
     let mut bytes = vec![0u8; len];
     OsRng.try_fill_bytes(&mut bytes).map_err(|e| {
         error!("Random bytes generation failed: {}", e);
-        KyberError::RandomError(format!("Failed to generate random bytes: {}", e))
+        MlKemError::RandomError(format!("Failed to generate random bytes: {}", e))
     })?;
     Ok(bytes)
 }
@@ -439,8 +439,8 @@ mod tests {
 
     use super::*;
     use crate::{
-        params::{Kyber1024, Kyber512, Kyber768},
-        Kyber,
+        params::{MlKem1024, MlKem512, MlKem768},
+        MlKem,
     };
 
     static INIT_LOGGER: Once = Once::new();
@@ -453,10 +453,10 @@ mod tests {
         });
     }
 
-    fn generate_keypair<P: KyberParams>() {
+    fn generate_keypair<P: MlKemParams>() {
         init_logging();
-        let kyber = Kyber::<P>::new();
-        let (pk, sk) = kyber.generate_keypair().expect("Keypair generation failed");
+        let mlkem = MlKem::<P>::new();
+        let (pk, sk) = mlkem.generate_keypair().expect("Keypair generation failed");
 
         assert_eq!(
             pk.bytes.len(),
@@ -477,11 +477,11 @@ mod tests {
         );
     }
 
-    fn encapsulate<P: KyberParams>() {
+    fn encapsulate<P: MlKemParams>() {
         init_logging();
-        let kyber = Kyber::<P>::new();
-        let (pk, _) = kyber.generate_keypair().expect("Keypair generation failed");
-        let (ct, ss) = kyber.encapsulate(&pk).expect("Encapsulation failed");
+        let mlkem = MlKem::<P>::new();
+        let (pk, _) = mlkem.generate_keypair().expect("Keypair generation failed");
+        let (ct, ss) = mlkem.encapsulate(&pk).expect("Encapsulation failed");
 
         assert_eq!(
             ct.bytes.len(),
@@ -501,12 +501,12 @@ mod tests {
         );
     }
 
-    fn decapsulate<P: KyberParams>() {
+    fn decapsulate<P: MlKemParams>() {
         init_logging();
-        let kyber = Kyber::<P>::new();
-        let (pk, sk) = kyber.generate_keypair().expect("Keypair generation failed");
-        let (ct, ss1) = kyber.encapsulate(&pk).expect("Encapsulation failed");
-        let ss2 = kyber.decapsulate(&sk, &ct).expect("Decapsulation failed");
+        let mlkem = MlKem::<P>::new();
+        let (pk, sk) = mlkem.generate_keypair().expect("Keypair generation failed");
+        let (ct, ss1) = mlkem.encapsulate(&pk).expect("Encapsulation failed");
+        let ss2 = mlkem.decapsulate(&sk, &ct).expect("Decapsulation failed");
 
         assert_eq!(
             ss1.0,
@@ -517,47 +517,47 @@ mod tests {
     }
 
     // #[test]
-    // fn kyber512_generate_keypair() {
-    //     generate_keypair::<Kyber512>();
+    // fn mlkem_512_generate_keypair() {
+    //     generate_keypair::<MlKem512>();
     // }
 
     // #[test]
-    // fn kyber768_generate_keypair() {
-    //     generate_keypair::<Kyber768>();
+    // fn mlkem_768_generate_keypair() {
+    //     generate_keypair::<MlKem768>();
     // }
 
     // #[test]
-    // fn kyber1024_generate_keypair() {
-    //     generate_keypair::<Kyber1024>();
+    // fn mlkem_1024_generate_keypair() {
+    //     generate_keypair::<MlKem1024>();
     // }
 
     // #[test]
-    // fn kyber512_encapsulate() {
-    //     encapsulate::<Kyber512>();
+    // fn mlkem_512_encapsulate() {
+    //     encapsulate::<MlKem512>();
     // }
 
     // #[test]
-    // fn kyber768_encapsulate() {
-    //     encapsulate::<Kyber768>();
+    // fn mlkem_768_encapsulate() {
+    //     encapsulate::<MlKem768>();
     // }
 
     // #[test]
-    // fn kyber1024_encapsulate() {
-    //     encapsulate::<Kyber1024>();
+    // fn mlkem_1024_encapsulate() {
+    //     encapsulate::<MlKem1024>();
     // }
 
     // #[test]
-    // fn kyber512_decapsulate() {
-    //     decapsulate::<Kyber512>();
+    // fn mlkem_512_decapsulate() {
+    //     decapsulate::<MlKem512>();
     // }
 
     // #[test]
-    // fn kyber768_decapsulate() {
-    //     decapsulate::<Kyber768>();
+    // fn mlkem_768_decapsulate() {
+    //     decapsulate::<MlKem768>();
     // }
 
     // #[test]
-    // fn kyber1024_decapsulate() {
-    //     decapsulate::<Kyber1024>();
+    // fn mlkem_1024_decapsulate() {
+    //     decapsulate::<MlKem1024>();
     // }
 }

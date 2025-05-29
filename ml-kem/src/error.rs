@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum KyberError {
+pub enum MlKemError {
     #[error("Invalid key length: expected {expected}, got {actual}")]
     KeyLengthError { expected: usize, actual: usize },
     #[error("Invalid ciphertext length: expected {expected}, got {actual}")]
