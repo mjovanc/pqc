@@ -62,8 +62,8 @@ Below is a table of currently supported features and planned additions, designed
 | Feature                    | Description                                              | Status | Notes                                                                                   |
 |----------------------------|----------------------------------------------------------|------|-----------------------------------------------------------------------------------------|
 | **ML-KEM**            | Key Encapsulation Mechanism (NIST-standard)              | 🏗️ | Supports ML-KEM 512, ML-KEM 768, ML-KEM 1024 for varying security levels (FIPS 203).          |
-| **Dilithium (Signatures)** | Digital signature scheme (NIST-standard)                 | 🚧 | Includes Dilithium2, Dilithium3, Dilithium5 variants (FIPS 204).                        |
-| **SPHINCS+ (Signatures)**  | Stateless hash-based signature scheme (NIST-standard)    | 🚧 | Supports SPHINCS+-128s, 128f, 256s, 256f for stateless signing (FIPS 205).              |
+| **ML-DSA (Signatures)** | Digital signature scheme (NIST-standard)                 | 🚧 | Includes ML-DSA 2, ML-DSA 3, ML-DSA 5 variants (FIPS 204).                        |
+| **SLH-DSA (Signatures)**  | Stateless hash-based signature scheme (NIST-standard)    | 🚧 | Supports SLH-DSA-128s, 128f, 256s, 256f for stateless signing (FIPS 205).              |
 
 
 ## Peer Reviewing
